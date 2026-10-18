@@ -1,7 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
-from pydantic import EmailStr
 from backend.core.config import config as cfg
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +9,6 @@ from backend.core.security import (
     create_session_token,
     create_url_safe_token,
     decode_url_safe_token,
-    hash_password,
     unsafely_peek_token_payload,
     verify_password,
 )
@@ -18,14 +16,18 @@ from backend.error import InvalidUserCredential, UserAlreadyExists
 from backend.external.database import get_session
 from backend.external.email import send_email
 from backend.schema.auth_schema import (
+    ForgotPassword,
     ResetPasswordSubmitSchema,
     UserLogin,
     UserRegister,
 )
 from backend.service.auth_service import AuthService
+from backend.core.logging import get_app_logger
 
 auth_router = APIRouter()
 auth_service = AuthService()
+
+logger = get_app_logger(__name__)
 
 
 @auth_router.post("/signup", status_code=status.HTTP_201_CREATED)
@@ -34,16 +36,22 @@ async def create_user(
     user_data: UserRegister,
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    # check email doesn't exist
+    logger.info(
+        f"Attempting to register user with email: {user_data.email} and username: {user_data.username}"
+    )
     email_exist = await auth_service.get_user_by_email(user_data.email, session)
     username_exist = await auth_service.get_user_by_username(
         user_data.username, session
     )
 
     if email_exist or username_exist:
+        logger.warning(
+            f"User registration failed - email or username already exists. Email: {user_data.email}, Username: {user_data.username}"
+        )
         raise UserAlreadyExists
 
     new_user = await auth_service.create_user(user_data, session)
+    logger.info(f"User created successfully with ID: {new_user.id}")
 
     bg.add_task(
         send_email,
@@ -55,6 +63,7 @@ async def create_user(
             "app_url": cfg.FRONTEND_URL,
         },
     )
+    logger.info(f"Welcome email scheduled to be sent to: {new_user.email}")
 
     # send tokens for authorization
 
@@ -62,6 +71,7 @@ async def create_user(
 
     session_token = create_session_token(token_dict)
     refresh_token = create_refresh_token(token_dict)
+    logger.debug(f"Session and refresh tokens generated for user ID: {new_user.id}")
 
     response = JSONResponse(
         content={
@@ -91,6 +101,9 @@ async def create_user(
         path="/",
     )
 
+    logger.info(
+        f"Set cookies for session_token and refresh_token for user ID: {new_user.id}"
+    )
     return response
 
 
@@ -98,23 +111,36 @@ async def create_user(
 async def login_user(
     user_data: UserLogin, session: Annotated[AsyncSession, Depends(get_session)]
 ):
+    logger.info(
+        f"Signin attempt for email: {getattr(user_data, 'email', None)} or username: {getattr(user_data, 'username', None)}"
+    )
+
     valid_user = None
     if user_data.email:
         valid_user = await auth_service.get_user_by_email(user_data.email, session)
+        logger.debug(
+            f"Lookup by email completed for {user_data.email}: {'found' if valid_user else 'not found'}"
+        )
     elif user_data.username:
         valid_user = await auth_service.get_user_by_username(
             user_data.username, session
         )
+        logger.debug(
+            f"Lookup by username completed for {user_data.username}: {'found' if valid_user else 'not found'}"
+        )
 
     if not valid_user or not verify_password(valid_user.password, user_data.password):
+        logger.warning(
+            f"Invalid credentials for signin attempt (email: {getattr(user_data, 'email', None)}, username: {getattr(user_data, 'username', None)})"
+        )
         raise InvalidUserCredential
-
-    # send tokens for authorization
 
     token_dict = {"sub": str(valid_user.id), "email": valid_user.email}
 
     session_token = create_session_token(token_dict)
     refresh_token = create_refresh_token(token_dict)
+
+    logger.debug(f"Session and refresh tokens generated for user ID: {valid_user.id}")
 
     response = JSONResponse(
         content={
@@ -144,18 +170,25 @@ async def login_user(
         samesite="lax",
     )
 
+    logger.info(
+        f"Set cookies for session_token and refresh_token for user ID: {valid_user.id}"
+    )
+
     return response
 
 
 @auth_router.post("/forgot-password")
 async def forgot_password(
     bg: BackgroundTasks,
-    email: EmailStr,
+    payload: ForgotPassword,
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
+    email = payload.email
+    logger.info(f"Password reset requested for email: {email}")
     user = await auth_service.get_user_by_email(email, session)
 
     if user is None:
+        logger.warning(f"Password reset requested for non-existent email: {email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Email not found"
         )
@@ -164,16 +197,24 @@ async def forgot_password(
 
     reset_url = f"{cfg.FRONTEND_URL}/reset_password/{token}"
 
+    logger.debug(
+        f"Generated password reset token and URL for user ID: {user.id}, email: {user.email}"
+    )
+
     bg.add_task(
         send_email,
         subject="Reset your Velmio password",
         recipients=[user.email],
         template_name="reset_password.html",
         context={
-            "first_name": user.username,
+            "username": user.username,
             "reset_url": reset_url,
             "expiry_minutes": 30,
         },
+    )
+
+    logger.info(
+        f"Password reset email scheduled for user ID: {user.id}, email: {user.email}"
     )
 
     return {"message": "Password reset instructions have been sent to your email."}

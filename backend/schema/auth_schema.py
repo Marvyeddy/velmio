@@ -29,3 +29,7 @@ class UserLogin(BaseModel):
 class ResetPasswordSubmitSchema(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8, description="The new secure password")
+
+
+class ForgotPassword(BaseModel):
+    email: EmailStr = Field(..., description="The user valid email")

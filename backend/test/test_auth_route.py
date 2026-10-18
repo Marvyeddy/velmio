@@ -129,10 +129,9 @@ async def test_forgot_password_success(mock_send_email, client, session):
     session.add(existing_user)
     await session.commit()
 
-    response = await client.post(
-        "/api/v1/auth/forgot-password",
-        params={"email": "testuser@email.com"},
-    )
+    payload = {"email": "testuser@email.com"}
+
+    response = await client.post("/api/v1/auth/forgot-password", json=payload)
 
     assert response.status_code == 200
 
@@ -152,7 +151,7 @@ async def test_forgot_password_success(mock_send_email, client, session):
 
     context = call_kwargs["context"]
 
-    assert context["first_name"] == "testuser"
+    assert context["username"] == "testuser"
     assert context["expiry_minutes"] == 30
 
     reset_url = context["reset_url"]
@@ -171,9 +170,8 @@ async def test_forgot_password_success(mock_send_email, client, session):
 @pytest.mark.asyncio
 @patch("backend.route.auth_route.send_email")
 async def test_forgot_password_email_not_found(mock_send_email, client):
-    response = await client.post(
-        "/api/v1/auth/forgot-password", params={"email": "nonexistent@velmio.com"}
-    )
+    payload = {"email": "anyuser@email.com"}
+    response = await client.post("/api/v1/auth/forgot-password", json=payload)
 
     assert response.status_code == 404
 
