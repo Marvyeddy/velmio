@@ -111,9 +111,7 @@ async def test_invalid_credentials(mock_verify, session):
     session.add(existing_user)
     await session.commit()
 
-    payload = UserLogin(
-        email="newuser@email.com", username="newuser", password="non-hashed-password"
-    )
+    payload = UserLogin(email="newuser@email.com", password="non-hashed-password")
 
     with pytest.raises(InvalidUserCredential):
         await login_user(user_data=payload, session=session)

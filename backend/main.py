@@ -2,6 +2,8 @@ from fastapi import FastAPI
 import sys
 import asyncio
 
+from backend.error import require_error
+from backend.middleware import require_middleware
 from backend.route.auth_route import auth_router
 
 version = "v1"
@@ -29,6 +31,9 @@ app = FastAPI(
     docs_url=f"/api/{version}/docs",
     openapi_url=f"/api/{version}/openapi.json",
 )
+
+require_error(app)
+require_middleware(app)
 
 
 @app.get("/")

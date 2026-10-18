@@ -51,7 +51,7 @@ def require_error(app: FastAPI):
         create_exception_handler(
             status_code=status.HTTP_409_CONFLICT,
             detail={
-                "message": "A user with this email already exists.",
+                "message": "A user with credential already exists.",
                 "error-code": "user_already_exists",
             },
         ),
