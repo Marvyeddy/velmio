@@ -89,3 +89,23 @@ async def test_create_user(session):
     assert response.email == "newuser@email.com"
     assert response.password != "non-hashed-password"
     assert response.username == "newuser"
+
+
+@pytest.mark.asyncio
+async def test_update_user(session):
+    existing_user = Auth(
+        id=uuid.uuid4(),
+        email="testuser@email.com",
+        username="testuser",
+        password="hashed_password",
+    )
+
+    session.add(existing_user)
+    await session.commit()
+
+    response = await auth_service.update_user(
+        existing_user.id, {"username": "testuser1"}, session
+    )
+
+    assert response.username != "testuser"
+    assert response.username == "testuser1"

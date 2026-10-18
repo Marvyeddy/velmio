@@ -39,3 +39,24 @@ class AuthService:
         await session.commit()
 
         return new_user
+
+    async def update_user(
+        self, id: UUID, data: dict, session: AsyncSession
+    ) -> Auth | None:
+        user = await self.get_user_by_id(id, session)
+
+        if user is None:
+            return None
+
+        for key, value in data.items():
+            if hasattr(user, key):
+                if key == "password":
+                    setattr(user, key, hash_password(value))
+                else:
+                    setattr(user, key, value)
+
+        # Commit the changes to the database
+        await session.commit()
+        await session.refresh(user)
+
+        return user

@@ -221,7 +221,7 @@ async def reset_password_submit(
         )
 
     token_data = decode_url_safe_token(
-        token=body.token, salt=user.hashed_password, max_age_seconds=1800
+        token=body.token, salt=user.password, max_age_seconds=1800
     )
 
     if token_data is None:
@@ -230,9 +230,9 @@ async def reset_password_submit(
             detail="Cannot complete request. Link has expired or already been used.",
         )
 
-    new_hashed_password = hash_password(body.new_password)
+    new_password = body.new_password
 
-    await auth_service.update_user_password(user.id, new_hashed_password, session)
+    await auth_service.update_user(user.id, {"password": new_password}, session)
 
     return {
         "message": "Password updated successfully. You can now log in with your new password"

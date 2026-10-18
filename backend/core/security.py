@@ -1,5 +1,7 @@
 # Functions for hashing and verifying passwords
+import base64
 from datetime import datetime, timedelta
+import json
 from typing import Any
 import uuid
 from argon2 import PasswordHasher, exceptions
@@ -90,11 +92,34 @@ def decode_url_safe_token(
 # Frontend restriction from email
 def unsafely_peek_token_payload(token: str) -> dict:
     try:
-        serializer_vulnerable = URLSafeTimedSerializer(secret_key=cfg.JWT_KEY)
-        return serializer_vulnerable.load_payload(token)
-    except Exception as e:
-        logger.error("Failed to parse token payload layout: %s", str(e))
+        parts = token.split(".")
+
+        if len(parts) != 3:
+            raise ValueError("Unexpected token structure.")
+
+        payload_segment = parts[0]
+
+        # Restore Base64 padding.
+        padded_payload = payload_segment + "=" * (-len(payload_segment) % 4)
+
+        payload_bytes = base64.urlsafe_b64decode(padded_payload.encode("ascii"))
+
+        data = json.loads(payload_bytes.decode("utf-8"))
+
+        if not isinstance(data, dict):
+            raise ValueError("Token payload must be a JSON object.")
+
+        return data
+
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        logger.warning("Failed to parse token payload: %s", str(exc))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="The link structure is invalid.",
-        )
+        ) from exc
+    except Exception as exc:
+        logger.warning("Failed to parse token payload: %s", str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The link structure is invalid.",
+        ) from exc
