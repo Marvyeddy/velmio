@@ -265,7 +265,7 @@ async def test_reset_password_submit_success(mock_update_user, client, session):
     payload = {"token": valid_token, "new_password": "brand-new-secure-password"}
 
     # 2. Act
-    response = await client.post("/api/v1/auth/reset-password-submit", json=payload)
+    response = await client.post("/api/v1/auth/reset-password", json=payload)
 
     # 3. Assert
     assert response.status_code == 200
@@ -300,7 +300,7 @@ async def test_reset_password_submit_tampered_token(mock_update_user, client, se
     payload = {"token": bad_token, "new_password": "some-new-password"}
 
     # 2. Act
-    response = await client.post("/api/v1/auth/reset-password-submit", json=payload)
+    response = await client.post("/api/v1/auth/reset-password", json=payload)
 
     # 3. Assert
     assert response.status_code == 400

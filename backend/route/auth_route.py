@@ -1,18 +1,34 @@
-from typing import Annotated
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from typing import Annotated, Any
+from uuid import UUID
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Cookie,
+    Depends,
+    HTTPException,
+    Header,
+    status,
+)
 from fastapi.responses import JSONResponse
 from backend.core.config import config as cfg
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.constants import SESSION_TOKEN_EXPIRY
 from backend.core.security import (
     create_refresh_token,
     create_session_token,
     create_url_safe_token,
+    decode_token,
     decode_url_safe_token,
     unsafely_peek_token_payload,
     verify_password,
 )
-from backend.error import InvalidUserCredential, UserAlreadyExists
+from backend.error import (
+    InvalidUserCredential,
+    RefreshTokenException,
+    TokenException,
+    UserAlreadyExists,
+)
 from backend.external.database import get_session
 from backend.external.email import send_email
 from backend.schema.auth_schema import (
@@ -247,7 +263,7 @@ async def verify_reset_token(
     return {"status": "valid", "user_id": user_id}
 
 
-@auth_router.post("/reset-password-submit")
+@auth_router.post("/reset-password")
 async def reset_password_submit(
     body: ResetPasswordSubmitSchema,
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -278,3 +294,102 @@ async def reset_password_submit(
     return {
         "message": "Password updated successfully. You can now log in with your new password"
     }
+
+
+@auth_router.get("/refresh")
+async def refresh_token(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    authorization: Annotated[str | None, Header()] = None,
+    refresh_cookie: Annotated[str | None, Cookie(alias="refresh_token")] = None,
+):
+    token = refresh_cookie
+
+    if not token and authorization:
+        scheme, _, bearer_token = authorization.parititon(" ")
+
+        if scheme.lower() == "bearer" and bearer_token:
+            token = bearer_token
+
+    if not token:
+        logger.warning("No refresh token was provided")
+        raise TokenException
+
+    token_data = decode_token(token)
+
+    if not token_data:
+        logger.warning("Failed to decode refresh token")
+        raise TokenException
+
+    if token_data.get("type") != "refresh" or "sub" not in token_data:
+        logger.warning("The wrong token was provided")
+        raise RefreshTokenException
+
+    user_id = UUID(token_data.get("sub"))
+
+    user = await auth_service.get_user_by_id(user_id, session)
+
+    if not user:
+        logger.warning(f"User not found for refresh token: {user_id}")
+        raise TokenException
+
+    new_token_dict = {"sub": str(user.id), "email": user.email}
+
+    new_session_token = create_session_token(new_token_dict)
+    new_refresh_token = create_refresh_token(new_token_dict)
+
+    response = JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": "Token refreshed",
+            "session-token": new_session_token,
+            "refresh-token": new_refresh_token,
+        },
+    )
+
+    response.set_cookie(
+        key="session_token",
+        value=new_session_token,
+        max_age=60 * 60,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        max_age=60 * 60 * 24 * 2,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+    return response
+
+
+@auth_router.get("/signout")
+async def signout(
+    authorization: Annotated[str | None, Header()] = None,
+    refresh_token: Annotated[str | None, Header()] = None,
+    refresh_cookie: Annotated[str | None, Cookie(alias="refresh_token")] = None,
+    session_cookie: Annotated[str | None, Cookie(alias="session_token")] = None,
+):
+    # first remove authorization and header tokens
+    logger.info("Logout request received")
+    tokens_to_revoke: dict[str, Any] = {}
+    if authorization:
+        scheme, _, bearer_token = authorization.partition(" ")
+        if scheme.lower() == "bearer" and bearer_token:
+            token_data = decode_token(bearer_token)
+
+            if token_data:
+                token_type = token_data["type"]
+
+                if token_type == "session":
+                    tokens_to_revoke[bearer_token] = SESSION_TOKEN_EXPIRY
+                elif token_type == "refresh":
+                    logger.warning("Refresh token supplied as Authorization token")
+                else:
+                    logger.warning("Unknown token type supplied during logout")
