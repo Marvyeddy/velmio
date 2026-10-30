@@ -1,0 +1,25 @@
+[project]
+name = "server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "fastapi[standard]>=0.162.0",
+    "psycopg[binary,pool]>=3.3.6",
+    "sqlalchemy[asyncio]>=2.1.6",
+    "sqlmodel>=0.0.48",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff.lint]
+select = ["I", "E", "F"]
+ignore = ["I001", "E501", "F401"]

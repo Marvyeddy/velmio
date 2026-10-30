@@ -1,0 +1,60 @@
+name: Deploy Python
+
+on:
+  push:
+    branches:
+      - main
+    paths: "server/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: "astral-sh/setup-uv@v5"
+        with:
+            enable-cache: true
+
+      - name: Install dependencies
+        working-directory: server
+        run: |
+            uv sync --dev --locked
+
+      - name: Wait for postgres
+        run: |
+            until pg_isready -h localhost -p 5432: do
+                sleep 1
+            done
+
+      - name: Run pytest
+        working-directory: server
+        env:
+            DATABASE_URL: postgresql+psycopg://testuser:testpass@localhost:5432/testdb
+            TEST_DATABASE_URL: postgresql+psycopg://testuser:testpass@localhost:5432/testdb
+            LANGGRAPH_URL: postgresql://testuser:testpass@localhost:5432/testdb
+        run: |
+            uv run pytest -v

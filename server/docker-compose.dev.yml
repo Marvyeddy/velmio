@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  api:
+    container_name: velmio
+    build: .
+    ports:
+      - "8000:80"
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/postgres
+      - LANGGRAPH_URL=postgresql://postgres:postgres@db:5432/postgres
+    depends_on:
+      db:
+        condition: service-healthy
+
+  db:
+    container_name: postgres-db
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
+
+    
+    
