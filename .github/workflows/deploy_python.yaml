@@ -56,5 +56,11 @@ jobs:
             DATABASE_URL: postgresql+psycopg://testuser:testpass@localhost:5432/testdb
             TEST_DATABASE_URL: postgresql+psycopg://testuser:testpass@localhost:5432/testdb
             LANGGRAPH_URL: postgresql://testuser:testpass@localhost:5432/testdb
+            MAIL_USERNAME: "dummyuser@example.com"
+            MAIL_PASSWORD: "dummy-password"
+            MAIL_FROM: "dummyuser@example.com"
+            JWT_KEY: "dummy-jwt"
+            JWT_ALG: "HS256"
+            FRONTEND_URL: "http://localhost:3000"
         run: |
             uv run pytest -v

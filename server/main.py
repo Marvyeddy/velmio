@@ -2,6 +2,8 @@ from fastapi import FastAPI
 import sys
 import asyncio
 
+from server.router.auth import auth_router
+
 version = "v1"
 
 
@@ -25,3 +27,6 @@ app = FastAPI(
 @app.get("/root")
 async def root():
     return {"message": "Welcome Velmio"}
+
+
+app.include_router(auth_router, prefix=f"/api/{version}/auth", tags=["Auth"])

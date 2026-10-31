@@ -13,6 +13,7 @@ from server.main import app
 
 @pytest_asyncio.fixture()
 async def async_engine() -> AsyncEngine:
+
     engine = create_async_engine(
         url=cfg.TEST_DATABASE_URL, echo=False, pool_pre_ping=True
     )
@@ -24,6 +25,7 @@ async def async_engine() -> AsyncEngine:
 
 @pytest_asyncio.fixture()
 async def session(async_engine) -> AsyncSession:
+
     Session = sessionmaker(
         bind=async_engine, class_=AsyncSession, autoflush=False, expire_on_commit=False
     )
@@ -35,6 +37,7 @@ async def session(async_engine) -> AsyncSession:
 
 @pytest_asyncio.fixture(autouse=True)
 async def test_db(async_engine):
+
     async with async_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
@@ -47,6 +50,7 @@ async def test_db(async_engine):
 
 @pytest_asyncio.fixture()
 async def client(session) -> AsyncClient:
+
     async def overide_session():
         return session
 
