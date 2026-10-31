@@ -1,9 +1,12 @@
 from fastapi import BackgroundTasks
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from server.constants import REFRESH_EXPIRY, SESSION_EXPIRY
 from server.errors import UserAlreadyExists
 from server.external.email import send_email
 from server.schemas.users import UserCreate
 from server.services.auth import AuthService
+from server.utils.jwt_token import create_refresh, create_session
 from server.utils.verification_tokens import create_email_verification_token
 from server.core.config import config as cfg
 from server.core.logging import get_app_logger
@@ -55,5 +58,31 @@ async def signup_controller(
         },
     )
 
+    # create session and refresh token
+    token_dict = {"sub": str(new_user.id), "email": new_user.email}
+
+    session_token = create_session(token_dict)
+    refresh_token = create_refresh(token_dict)
+
     logger.info(f"User {new_user.username} (ID: {new_user.id}) signed up successfully.")
-    return {"message": "User Signed up successfully"}
+    response = JSONResponse(content={"message": "User Signed up successfully"})
+
+    response.set_cookie(
+        key="session-token",
+        value=session_token,
+        max_age=SESSION_EXPIRY,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+
+    response.set_cookie(
+        key="refresh-token",
+        value=refresh_token,
+        max_age=REFRESH_EXPIRY,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+
+    return response
