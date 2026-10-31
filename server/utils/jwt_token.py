@@ -12,7 +12,7 @@ def create_token_data(data: dict, token_type: str, expiry: int):
     expiry_period = datetime.now(UTC) + timedelta(seconds=expiry)
 
     data_copy.update(
-        {"type": token_type, "exp": expiry_period, "jti": str(uuid.uud4())}
+        {"type": token_type, "exp": expiry_period, "jti": str(uuid.uuid4())}
     )
 
     return jwt.encode(payload=data_copy, key=cfg.JWT_KEY, algorithm=cfg.JWT_ALG)

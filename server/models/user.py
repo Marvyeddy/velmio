@@ -22,6 +22,9 @@ class User(SQLModel, table=True):
     is_active: bool = Field(
         default=True, sa_column_kwargs={"server_default": sa.true()}
     )
+    verified: bool = Field(
+        default=False, sa_column_kwargs={"server_default": sa.false()}
+    )
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
