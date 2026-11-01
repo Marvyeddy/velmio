@@ -16,6 +16,12 @@ class UserAlreadyExists(VelmioException):
     pass
 
 
+class InvalidCredentials(VelmioException):
+    """Credentials are wrong and do not exist in database"""
+
+    pass
+
+
 def create_exception_handler(
     status_code: int, content: Any
 ) -> Callable[[Request, Exception], JSONResponse]:
@@ -55,5 +61,13 @@ def require_error(app: FastAPI):
             content={
                 "message": "User credential already exists",
             },
+        ),
+    )
+
+    app.add_exception_handler(
+        InvalidCredentials,
+        create_exception_handler(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"message": "User credential is invalid"},
         ),
     )

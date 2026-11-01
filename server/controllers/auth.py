@@ -1,11 +1,12 @@
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.constants import REFRESH_EXPIRY, SESSION_EXPIRY
-from server.errors import UserAlreadyExists
+from server.errors import InvalidCredentials, UserAlreadyExists
 from server.external.email import send_email
-from server.schemas.users import UserCreate
+from server.schemas.users import UserCreate, UserLogin
 from server.services.auth import AuthService
+from server.utils.hashing import verify_pwd
 from server.utils.jwt_token import create_refresh, create_session
 from server.utils.verification_tokens import create_email_verification_token
 from server.core.config import config as cfg
@@ -65,7 +66,9 @@ async def signup_controller(
     refresh_token = create_refresh(token_dict)
 
     logger.info(f"User {new_user.username} (ID: {new_user.id}) signed up successfully.")
-    response = JSONResponse(content={"message": "User Signed up successfully"})
+    response = JSONResponse(
+        content={"message": "User Signed up successfully"}, status_code=201
+    )
 
     response.set_cookie(
         key="session-token",
@@ -82,6 +85,51 @@ async def signup_controller(
         max_age=REFRESH_EXPIRY,
         httponly=True,
         secure=True,
+        samesite="lax",
+    )
+
+    return response
+
+
+async def signin_controller(user_data: UserLogin, session: AsyncSession):
+
+    user_dict = user_data.model_dump()
+
+    email = user_dict["email"]
+    password = user_dict["password"]
+
+    user = await auth_service.get_user_by_email(email, session)
+
+    if user is None or not verify_pwd(user.password, password):
+        raise InvalidCredentials()
+
+    # token
+    token_dict = {"sub": str(user.id), "email": user.email}
+
+    session_token = create_session(token_dict)
+    refresh_token = create_refresh(token_dict)
+
+    response = JSONResponse(
+        content={"message": "User logged-in successfully"}, status_code=200
+    )
+
+    response.set_cookie(
+        key="session-token",
+        value=session_token,
+        path="/",
+        max_age=SESSION_EXPIRY,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+    response.set_cookie(
+        key="refresh-token",
+        value=refresh_token,
+        path="/",
+        max_age=REFRESH_EXPIRY,
+        secure=True,
+        httponly=True,
         samesite="lax",
     )
 

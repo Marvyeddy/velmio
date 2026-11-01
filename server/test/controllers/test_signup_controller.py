@@ -108,7 +108,7 @@ async def test_signup_controller_success(
     response_data = json.loads(response.body.decode("utf-8"))
 
     # Assert response
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response_data["message"] == "User Signed up successfully"
 
     # Assert service calls
