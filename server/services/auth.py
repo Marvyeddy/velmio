@@ -22,6 +22,14 @@ class AuthService:
 
         return result.unique().scalar_one_or_none()
 
+    async def get_user_by_id(self, user_id: str, session: AsyncSession) -> User:
+
+        statement = select(User).where(User.id == user_id)
+
+        result = await session.execute(statement)
+
+        return result.unique().scalar_one_or_none()
+
     async def create_user(self, user_data: dict, session: AsyncSession):
 
         new_user = User(**user_data)

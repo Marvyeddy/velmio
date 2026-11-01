@@ -2,13 +2,22 @@ from fastapi import BackgroundTasks, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.constants import REFRESH_EXPIRY, SESSION_EXPIRY
-from server.errors import InvalidCredentials, UserAlreadyExists
+from server.errors import (
+    EmailAlreadyVerified,
+    InvalidCredentials,
+    InvalidVerificationToken,
+    UserAlreadyExists,
+    UserNotFound,
+)
 from server.external.email import send_email
 from server.schemas.users import UserCreate, UserLogin
 from server.services.auth import AuthService
 from server.utils.hashing import verify_pwd
 from server.utils.jwt_token import create_refresh, create_session
-from server.utils.verification_tokens import create_email_verification_token
+from server.utils.verification_tokens import (
+    create_email_verification_token,
+    verifiy_email_verification_token,
+)
 from server.core.config import config as cfg
 from server.core.logging import get_app_logger
 
@@ -134,3 +143,25 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
     )
 
     return response
+
+
+async def verify_email_controller(token: str, session: AsyncSession):
+    user_id = verifiy_email_verification_token(token)
+
+    if not user_id:
+        raise InvalidVerificationToken()
+
+    user = await auth_service.get_user_by_id(user_id, session)
+
+    if not user:
+        raise InvalidVerificationToken()
+
+    if user.verified:
+        raise EmailAlreadyVerified()
+
+    user.verified = True
+    session.add(user)
+    await session.commit()
+    return JSONResponse(
+        status_code=200, content={"message": "Email verified successfully"}
+    )

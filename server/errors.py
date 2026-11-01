@@ -22,6 +22,24 @@ class InvalidCredentials(VelmioException):
     pass
 
 
+class InvalidVerificationToken(VelmioException):
+    """Verification token is invalid or expired"""
+
+    pass
+
+
+class UserNotFound(VelmioException):
+    """User not found"""
+
+    pass
+
+
+class EmailAlreadyVerified(VelmioException):
+    """Email is already verified"""
+
+    pass
+
+
 def create_exception_handler(
     status_code: int, content: Any
 ) -> Callable[[Request, Exception], JSONResponse]:
@@ -69,5 +87,29 @@ def require_error(app: FastAPI):
         create_exception_handler(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"message": "User credential is invalid"},
+        ),
+    )
+
+    app.add_exception_handler(
+        InvalidVerificationToken,
+        create_exception_handler(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"message": "Invalid or expired verification token"},
+        ),
+    )
+
+    app.add_exception_handler(
+        UserNotFound,
+        create_exception_handler(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "User not found"},
+        ),
+    )
+
+    app.add_exception_handler(
+        EmailAlreadyVerified,
+        create_exception_handler(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"message": "Email is already verified"},
         ),
     )
