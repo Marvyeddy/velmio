@@ -13,3 +13,7 @@ class UserLogin(BaseModel):
         EmailStr, Field(description="The user's current email in database")
     ]
     password: Annotated[str, Field(description="The users non-hashed password in db")]
+
+
+class EmailRequest(BaseModel):
+    email: Annotated[EmailStr, Field(description="The user's email address")]

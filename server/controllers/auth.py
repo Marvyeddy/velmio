@@ -1,4 +1,4 @@
-from fastapi import BackgroundTasks, Response
+from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.constants import REFRESH_EXPIRY, SESSION_EXPIRY
@@ -107,9 +107,12 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
     email = user_dict["email"]
     password = user_dict["password"]
 
+    logger.info(f"Signin attempt started for email: {email}")
+
     user = await auth_service.get_user_by_email(email, session)
 
     if user is None or not verify_pwd(user.password, password):
+        logger.warning(f"Signin failed: Invalid credentials for email '{email}'.")
         raise InvalidCredentials()
 
     # token
@@ -118,6 +121,7 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
     session_token = create_session(token_dict)
     refresh_token = create_refresh(token_dict)
 
+    logger.info(f"User {user.username} (ID: {user.id}) signed in successfully.")
     response = JSONResponse(
         content={"message": "User logged-in successfully"}, status_code=200
     )
@@ -146,22 +150,71 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
 
 
 async def verify_email_controller(token: str, session: AsyncSession):
+    logger.info("Email verification attempt started.")
     user_id = verifiy_email_verification_token(token)
 
     if not user_id:
+        logger.warning("Email verification failed: Invalid or expired token.")
         raise InvalidVerificationToken()
 
     user = await auth_service.get_user_by_id(user_id, session)
 
     if not user:
+        logger.warning(f"Email verification failed: User not found for ID '{user_id}'.")
         raise InvalidVerificationToken()
 
     if user.verified:
+        logger.warning(
+            f"Email verification failed: Email already verified for user ID '{user.id}'."
+        )
         raise EmailAlreadyVerified()
 
     user.verified = True
     session.add(user)
     await session.commit()
+    logger.info(f"Email verified successfully for user ID: {user.id}")
     return JSONResponse(
         status_code=200, content={"message": "Email verified successfully"}
+    )
+
+
+async def resend_email_verification_controller(
+    bg: BackgroundTasks, email: str, session: AsyncSession
+):
+    logger.info(f"Resend email verification attempt started for email: {email}")
+    user = await auth_service.get_user_by_email(email, session)
+
+    if not user:
+        logger.warning(
+            f"Resend email verification failed: User not found for email '{email}'."
+        )
+        raise UserNotFound()
+
+    if user.verified:
+        logger.warning(
+            f"Resend email verification failed: Email already verified for user '{user.username}' (ID: {user.id})."
+        )
+        raise EmailAlreadyVerified()
+
+    token = create_email_verification_token(str(user.id))
+    verification_url = f"{cfg.FRONTEND_URL}/verify-email?token={token}"
+
+    logger.info(f"Scheduling email verification background task for user ID: {user.id}")
+    bg.add_task(
+        send_email,
+        subject="Verify your velmio account",
+        recipients=[user.email],
+        template_name="verify_email.html",
+        template_context={
+            "username": user.username,
+            "verification_url": verification_url,
+            "expiry_minutes": 30,
+        },
+    )
+
+    logger.info(
+        f"Email verification resent successfully for user {user.username} (ID: {user.id})."
+    )
+    return JSONResponse(
+        status_code=200, content={"message": "Email verification resent successfully"}
     )

@@ -3,12 +3,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.controllers.auth import (
+    resend_email_verification_controller,
     signin_controller,
     signup_controller,
     verify_email_controller,
 )
 from server.external.database import get_session
-from server.schemas.users import UserCreate, UserLogin
+from server.schemas.users import EmailRequest, UserCreate, UserLogin
 
 
 auth_router = APIRouter()
@@ -39,3 +40,13 @@ async def signin_router(
 ):
 
     return await signin_controller(user_data, session)
+
+
+@auth_router.post("/resend-email-verification")
+async def resend_email_verification_router(
+    bg: BackgroundTasks,
+    email: EmailRequest,
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+
+    return await resend_email_verification_controller(bg, email, session)

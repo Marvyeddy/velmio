@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from server.schemas.users import UserCreate, UserLogin
+from server.schemas.users import EmailRequest, UserCreate, UserLogin
 
 
 @pytest.mark.asyncio
@@ -35,3 +35,35 @@ async def test_signin_router(mock_controller, client):
     assert response.json() == {"message": "User logged-in successfully"}
 
     mock_controller.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("server.router.auth.verify_email_controller", new_callable=AsyncMock)
+async def test_verify_email_router(mock_controller, client):
+
+    token = "mocked_jwt_token"
+
+    mock_controller.return_value = {"message": "Email verified successfully"}
+
+    response = await client.get(f"/api/v1/auth/verify-email?token={token}")
+
+    assert response.status_code == 200
+    assert response.json() == {"message": "Email verified successfully"}
+
+
+@pytest.mark.asyncio
+@patch(
+    "server.router.auth.resend_email_verification_controller", new_callable=AsyncMock
+)
+async def test_resend_verification_email(mock_controller, client):
+    email = "newuser@email.com"
+
+    mock_controller.return_value = {"message": "Email verification resent successfully"}
+
+    response = await client.post(
+        "/api/v1/auth/resend-email-verification",
+        json=EmailRequest(email=email).model_dump(),
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"message": "Email verification resent successfully"}
