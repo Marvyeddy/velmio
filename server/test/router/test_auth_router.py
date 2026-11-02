@@ -67,3 +67,21 @@ async def test_resend_verification_email(mock_controller, client):
 
     assert response.status_code == 200
     assert response.json() == {"message": "Email verification resent successfully"}
+
+
+@pytest.mark.asyncio
+@patch("server.router.auth.forgot_password_controller", new_callable=AsyncMock)
+async def test_forgot_password(mock_forgot_password, client):
+
+    email = "newuser@email.com"
+
+    mock_forgot_password.return_value = {
+        "message": "Reset link has been sent to your email"
+    }
+
+    response = await client.post(
+        "/api/v1/auth/forgot-password", json=EmailRequest(email=email).model_dump()
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"message": "Reset link has been sent to your email"}

@@ -3,6 +3,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.controllers.auth import (
+    forgot_password_controller,
     resend_email_verification_controller,
     signin_controller,
     signup_controller,
@@ -50,3 +51,13 @@ async def resend_email_verification_router(
 ):
 
     return await resend_email_verification_controller(bg, email, session)
+
+
+@auth_router.post("/forgot-password")
+async def forgot_password_router(
+    bg: BackgroundTasks,
+    email: EmailRequest,
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+
+    return await forgot_password_controller(bg, email, session)

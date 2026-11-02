@@ -2,34 +2,39 @@ import json
 import uuid
 import pytest
 
-from server.controllers.auth import signin_controller
+from server.controllers.auth import auth_service, signin_controller
 from server.errors import InvalidCredentials
 from server.models.user import User
 from server.schemas.users import UserLogin
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 
 @pytest.mark.asyncio
+@patch("server.controllers.auth.auth_service.get_user_by_email")
 @patch("server.controllers.auth.verify_pwd")
-async def test_signin_controller_wrong_email(mock_verify_pwd, session):
+async def test_signin_controller_wrong_email(
+    mock_verify_pwd,
+    mock_get_user,
+    session,
+):
+    # Simulate an email that doesn't exist
+    mock_get_user.return_value = None
 
-    mock_verify_pwd.return_value = True
-
-    user_id = uuid.uuid4()
-    existing_data = User(
-        id=user_id,
-        email="newuser@email.com",
-        password="hashed-password",
-        username="newuser",
+    user_data = UserLogin(
+        email="wrongemail@email.com",
+        password="any-password",
     )
-    session.add(existing_data)
-    await session.commit()
-
-    # CHANGE THIS: Use an email that does NOT exist in the database
-    user_data = UserLogin(email="wrongemail@email.com", password="any-password")
 
     with pytest.raises(InvalidCredentials):
         await signin_controller(user_data, session)
+
+    mock_get_user.assert_awaited_once_with(
+        "wrongemail@email.com",
+        session,
+    )
+
+    # Password verification must not run for nonexistent users
+    mock_verify_pwd.assert_not_called()
 
 
 @pytest.mark.asyncio

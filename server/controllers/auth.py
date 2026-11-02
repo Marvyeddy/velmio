@@ -6,6 +6,7 @@ from server.errors import (
     EmailAlreadyVerified,
     InvalidCredentials,
     InvalidVerificationToken,
+    UnauthorizedCookie,
     UserAlreadyExists,
     UserNotFound,
 )
@@ -150,6 +151,7 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
 
 
 async def verify_email_controller(token: str, session: AsyncSession):
+
     logger.info("Email verification attempt started.")
     user_id = verifiy_email_verification_token(token)
 
@@ -181,6 +183,7 @@ async def verify_email_controller(token: str, session: AsyncSession):
 async def resend_email_verification_controller(
     bg: BackgroundTasks, email: str, session: AsyncSession
 ):
+
     logger.info(f"Resend email verification attempt started for email: {email}")
     user = await auth_service.get_user_by_email(email, session)
 
@@ -218,3 +221,52 @@ async def resend_email_verification_controller(
     return JSONResponse(
         status_code=200, content={"message": "Email verification resent successfully"}
     )
+
+
+async def forgot_password_controller(
+    bg: BackgroundTasks,
+    email: str,
+    session: AsyncSession,
+):
+    logger.info("Password reset requested")
+
+    user = await auth_service.get_user_by_email(email, session)
+
+    if not user:
+        logger.info("Password reset request completed for an unregistered email")
+        raise UserNotFound()
+
+    token = create_email_verification_token(
+        str(user.id),
+    )
+
+    reset_url = f"{cfg.FRONTEND_URL}/reset-password?token={token}"
+
+    logger.info(
+        "Scheduling password reset email for user ID: %s",
+        user.id,
+    )
+
+    bg.add_task(
+        send_email,
+        subject="Reset Your Velmio Password",
+        recipients=[user.email],
+        template_name="reset_password.html",
+        template_context={
+            "username": user.username,
+            "reset_url": reset_url,
+            "expiry_minutes": 30,
+        },
+    )
+
+    logger.info(
+        "Password reset email scheduled for user ID: %s",
+        user.id,
+    )
+
+    return {"message": "Reset link has been sent to your email"}
+
+
+async def refresh_token_controller(refresh_cookie: str, session: AsyncSession):
+
+    pass

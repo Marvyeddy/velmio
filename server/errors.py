@@ -40,6 +40,12 @@ class EmailAlreadyVerified(VelmioException):
     pass
 
 
+class UnauthorizedCookie(VelmioException):
+    """Wrong cookie was provided"""
+
+    pass
+
+
 def create_exception_handler(
     status_code: int, content: Any
 ) -> Callable[[Request, Exception], JSONResponse]:
@@ -111,5 +117,13 @@ def require_error(app: FastAPI):
         create_exception_handler(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"message": "Email is already verified"},
+        ),
+    )
+
+    app.add_exception_handler(
+        UnauthorizedCookie,
+        create_exception_handler(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"message": "Wrong cookie was provided"},
         ),
     )
