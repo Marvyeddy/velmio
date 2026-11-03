@@ -12,7 +12,11 @@ from server.models.user import User
 async def test_forgot_password_user_not_found(session):
 
     mock_bg = MagicMock(spec=BackgroundTasks)
-    auth_service.get_user_by_email = AsyncMock(return_value=None)
+    with patch(
+        "server.controllers.auth.auth_service.get_user_by_email",
+        new_callable=AsyncMock,
+    ) as mock_get_user:
+        mock_get_user.return_value = None
 
     with pytest.raises(UserNotFound):
         await forgot_password_controller(mock_bg, "newuser@email.com", session)
@@ -21,9 +25,16 @@ async def test_forgot_password_user_not_found(session):
 
 
 @pytest.mark.asyncio
+@patch(
+    "server.controllers.auth.store_reset_token",
+    new_callable=AsyncMock,
+)
 @patch("server.controllers.auth.create_email_verification_token")
-async def test_forgot_password_success(mock_token, session):
-
+async def test_forgot_password_success(
+    mock_token,
+    mock_store_token,
+    session,
+):
     user_id = uuid.uuid4()
 
     existing_user = User(
@@ -39,9 +50,7 @@ async def test_forgot_password_success(mock_token, session):
     mock_token.return_value = "mocked-reset-token"
 
     mock_bg = MagicMock(spec=BackgroundTasks)
-    auth_service.get_user_by_email.return_value = existing_user
 
-    # Call the controller
     response = await forgot_password_controller(
         mock_bg,
         existing_user.email,
@@ -51,8 +60,10 @@ async def test_forgot_password_success(mock_token, session):
     # Verify token generation
     mock_token.assert_called_once_with(str(user_id))
 
+    # Verify token was stored in Redis
+    mock_store_token.assert_awaited_once_with("mocked-reset-token")
+
     # Verify background email was scheduled
     mock_bg.add_task.assert_called_once()
 
-    # Controller currently returns None
-    assert response
+    assert response == {"message": "Reset link has been sent to your email"}

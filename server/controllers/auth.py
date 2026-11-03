@@ -17,6 +17,7 @@ from server.schemas.users import UserCreate, UserLogin
 from server.services.auth import AuthService
 from server.utils.hashing import verify_pwd
 from server.utils.jwt_token import create_refresh, create_session, decode_token
+from server.utils.reset_password_token import consume_reset_token, store_reset_token
 from server.utils.verification_tokens import (
     create_email_verification_token,
     verify_email_verification_token,
@@ -230,22 +231,21 @@ async def forgot_password_controller(
 ):
     logger.info("Password reset requested")
 
-    user = await auth_service.get_user_by_email(email, session)
+    user = await auth_service.get_user_by_email(
+        email,
+        session,
+    )
 
     if not user:
         logger.info("Password reset request completed for an unregistered email")
         raise UserNotFound()
 
-    token = create_email_verification_token(
-        str(user.id),
-    )
+    token = create_email_verification_token(str(user.id))
+
+    # Save token in Redis for 30 minutes
+    await store_reset_token(token)
 
     reset_url = f"{cfg.FRONTEND_URL}/reset-password?token={token}"
-
-    logger.info(
-        "Scheduling password reset email for user ID: %s",
-        user.id,
-    )
 
     bg.add_task(
         send_email,
@@ -279,19 +279,32 @@ async def reset_password_controller(
     if not user_id:
         raise InvalidToken()
 
-    user = await auth_service.get_user_by_id(user_id, session)
+    user = await auth_service.get_user_by_id(
+        user_id,
+        session,
+    )
 
     if not user:
         logger.warning("Password reset failed: User not found")
         raise UserNotFound()
 
-    # Update password
+    # Atomically consume the reset token
+    consumed = await consume_reset_token(token)
+
+    if not consumed:
+        logger.warning("Password reset token expired or already used")
+        raise InvalidToken()
+
     await auth_service.update_user(
         user=user,
         user_data={"password": password},
         session=session,
     )
-    logger.info("Password reset completed for user ID: %s", user.id)
+
+    logger.info(
+        "Password reset completed for user ID: %s",
+        user.id,
+    )
 
     return {"message": "Password reset successfully"}
 

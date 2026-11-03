@@ -90,13 +90,12 @@ async def test_resend_email_verification_controller_success(mock_send_email, ses
         id=user_id,
         email="newuser@email.com",
         username="newuser",
-        passsword="hashed_password",
+        password="hashed_password",
+        verified=False,
     )
 
     session.add(user)
     await session.commit()
-
-    auth_service.get_user_by_email.return_value = user
 
     mock_send_email.return_value = None
     mock_bg = Mock(spec=BackgroundTasks)

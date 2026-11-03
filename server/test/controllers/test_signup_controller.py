@@ -66,6 +66,11 @@ async def test_signup_controller_username_exists(session):
 
 
 @pytest.mark.asyncio
+@patch("server.controllers.auth.auth_service.create_user", new_callable=AsyncMock)
+@patch("server.controllers.auth.auth_service.get_user_by_email", new_callable=AsyncMock)
+@patch(
+    "server.controllers.auth.auth_service.get_user_by_username", new_callable=AsyncMock
+)
 @patch("server.controllers.auth.create_refresh")
 @patch("server.controllers.auth.create_session")
 @patch("server.controllers.auth.create_email_verification_token")
@@ -75,21 +80,24 @@ async def test_signup_controller_success(
     mock_create_email_verification,
     mock_create_session,
     mock_create_refresh,
+    mock_get_username,
+    mock_get_email,
+    mock_create_user,
     session,
 ):
     mock_create_email_verification.return_value = "mocked_jwt_token"
     mock_create_session.return_value = "mocked_session_token"
     mock_create_refresh.return_value = "mocked_refresh_token"
 
-    auth_service.get_user_by_username = AsyncMock(return_value=None)
-    auth_service.get_user_by_email = AsyncMock(return_value=None)
+    mock_get_username.return_value = None
+    mock_get_email.return_value = None
 
     mock_new_user = MagicMock()
     mock_new_user.id = "user_uuid_1234"
     mock_new_user.email = "newuser@email.com"
     mock_new_user.username = "newuser"
 
-    auth_service.create_user = AsyncMock(return_value=mock_new_user)
+    mock_create_user.return_value = mock_new_user
 
     mock_bg = MagicMock(spec=BackgroundTasks)
 
@@ -112,13 +120,11 @@ async def test_signup_controller_success(
     assert response_data["message"] == "User Signed up successfully"
 
     # Assert service calls
-    auth_service.get_user_by_username.assert_awaited_once_with("newuser", session)
+    mock_get_username.assert_awaited_once_with("newuser", session)
 
-    auth_service.get_user_by_email.assert_awaited_once_with(
-        "newuser@email.com", session
-    )
+    mock_get_email.assert_awaited_once_with("newuser@email.com", session)
 
-    auth_service.create_user.assert_awaited_once()
+    mock_create_user.assert_awaited_once()
 
     # Assert background email task
     mock_bg.add_task.assert_called_once()
@@ -145,6 +151,7 @@ async def test_signup_controller_success(
     session_cookie = next(
         cookie for cookie in cookies if cookie.startswith("session-token=")
     )
+
     refresh_cookie = next(
         cookie for cookie in cookies if cookie.startswith("refresh-token=")
     )
