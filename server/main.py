@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import sys
 import asyncio
 
+from server.errors import require_error
 from server.router.auth import auth_router
 
 version = "v1"
@@ -22,6 +23,8 @@ app = FastAPI(
         "url": "https://opensource.org",
     },
 )
+
+require_error(app)
 
 
 @app.get("/root")

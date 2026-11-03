@@ -71,7 +71,7 @@ async def forgot_password_router(
 @auth_router.post("/reset-password")
 async def reset_password_router(
     password: PasswordRequest,
-    token: str,
+    token: Annotated[str, Query(...)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
 

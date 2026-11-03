@@ -63,5 +63,6 @@ jobs:
             JWT_ALG: "HS256"
             FRONTEND_URL: "http://localhost:3000"
             REDIS_URL: "redis://localhost:6379/0"
+            COOKIE_SECURE: false
         run: |
             uv run pytest -v

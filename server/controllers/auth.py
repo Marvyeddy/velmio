@@ -87,7 +87,7 @@ async def signup_controller(
         value=session_token,
         max_age=SESSION_EXPIRY,
         httponly=True,
-        secure=True,
+        secure=cfg.COOKIE_SECURE,
         samesite="lax",
     )
 
@@ -96,7 +96,7 @@ async def signup_controller(
         value=refresh_token,
         max_age=REFRESH_EXPIRY,
         httponly=True,
-        secure=True,
+        secure=cfg.COOKIE_SECURE,
         samesite="lax",
     )
 
@@ -132,9 +132,8 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
     response.set_cookie(
         key="session-token",
         value=session_token,
-        path="/",
         max_age=SESSION_EXPIRY,
-        secure=True,
+        secure=cfg.COOKIE_SECURE,
         httponly=True,
         samesite="lax",
     )
@@ -142,9 +141,8 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
     response.set_cookie(
         key="refresh-token",
         value=refresh_token,
-        path="/",
         max_age=REFRESH_EXPIRY,
-        secure=True,
+        secure=cfg.COOKIE_SECURE,
         httponly=True,
         samesite="lax",
     )
@@ -368,7 +366,7 @@ async def refresh_token_controller(
         path="/",
         samesite="lax",
         httponly=True,
-        secure=True,
+        secure=cfg.COOKIE_SECURE,
     )
 
     response.set_cookie(
@@ -378,7 +376,7 @@ async def refresh_token_controller(
         path="/",
         samesite="lax",
         httponly=True,
-        secure=True,
+        secure=cfg.COOKIE_SECURE,
     )
 
     logger.info(
@@ -432,12 +430,10 @@ async def signout_controller(
 
     response.delete_cookie(
         key="session-token",
-        path="/",
     )
 
     response.delete_cookie(
         key="refresh-token",
-        path="/",
     )
 
     logger.info(

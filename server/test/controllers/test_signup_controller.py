@@ -154,5 +154,5 @@ async def test_signup_controller_success(
 
     assert "HttpOnly" in session_cookie
     assert "HttpOnly" in refresh_cookie
-    assert "Secure" in session_cookie
-    assert "Secure" in refresh_cookie
+    assert "Secure" not in session_cookie
+    assert "Secure" not in refresh_cookie
