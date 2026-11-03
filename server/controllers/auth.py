@@ -1,4 +1,4 @@
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.constants import REFRESH_EXPIRY, SESSION_EXPIRY
@@ -14,7 +14,7 @@ from server.external.email import send_email
 from server.schemas.users import UserCreate, UserLogin
 from server.services.auth import AuthService
 from server.utils.hashing import verify_pwd
-from server.utils.jwt_token import create_refresh, create_session
+from server.utils.jwt_token import create_refresh, create_session, decode_token
 from server.utils.verification_tokens import (
     create_email_verification_token,
     verify_email_verification_token,
@@ -294,3 +294,68 @@ async def reset_password_controller(
     logger.info("Password reset completed for user ID: %s", user.id)
 
     return {"message": "Password reset successfully"}
+
+
+async def refresh_token_controller(refresh_token: str, session: AsyncSession):
+
+    token = refresh_token
+
+    if not token:
+        logger.warning("No refresh token provided")
+        raise InvalidToken()
+
+    token_data = decode_token(token)
+
+    if not token_data:
+        logger.warning("Failed to decode refresh token")
+        raise InvalidToken()
+
+    if token_data.get("type") != "refresh" or "sub" not in token_data:
+        logger.warning("Invalid refresh token provided or missing subject")
+        raise InvalidToken()
+
+    user_id = token_data["sub"]
+
+    user = await auth_service.get_user_by_id(user_id, session)
+    if not user:
+        logger.warning(f"User not found for refresh token: {user_id}")
+        raise InvalidToken()
+
+    if user and getattr(user, "is_active", None) is False:
+        logger.warning(f"Inactive user attempted token refresh: {user_id}")
+        raise InvalidToken()
+
+    new_token_dict = {
+        "sub": str(user.id),
+        "email": user.email,
+    }
+
+    new_session_token = create_session(new_token_dict)
+    new_refresh_token = create_refresh(new_token_dict)
+
+    response = JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": "Session and refresh tokens refreshed",
+        },
+    )
+
+    response.set_cookie(
+        key="session-token",
+        value=new_session_token,
+        max_age=SESSION_EXPIRY,
+        samesite="lax",
+        httponly=True,
+        secure=False,  # True in production
+    )
+
+    response.set_cookie(
+        key="refresh-token",
+        value=new_refresh_token,
+        max_age=REFRESH_EXPIRY,
+        samesite="lax",
+        httponly=True,
+        secure=False,  # True in production
+    )
+
+    return response

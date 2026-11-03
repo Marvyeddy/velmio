@@ -1,9 +1,10 @@
 from typing import Annotated
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.controllers.auth import (
     forgot_password_controller,
+    refresh_token_controller,
     resend_email_verification_controller,
     reset_password_controller,
     signin_controller,
@@ -75,3 +76,12 @@ async def reset_password_router(
 
     password_dict = password.model_dump()
     return await reset_password_controller(password_dict["password"], token, session)
+
+
+@auth_router.get("/refresh")
+async def refresh_token_router(
+    refresh_token: Annotated[str, Cookie(alias="refresh-token")],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+
+    return await refresh_token_controller(refresh_token, session)

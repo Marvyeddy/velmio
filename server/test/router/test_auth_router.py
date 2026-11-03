@@ -115,3 +115,34 @@ async def test_reset_password_router(mock_reset_password, client):
 
     assert args[0] == password
     assert args[1] == token
+
+
+@pytest.mark.asyncio
+@patch(
+    "server.router.auth.refresh_token_controller",
+    new_callable=AsyncMock,
+)
+async def test_refresh_token_router(
+    mock_refresh_token,
+    client,
+    session,
+):
+    refresh_token = "mock-refresh-token"
+
+    mock_refresh_token.return_value = {
+        "message": "Session and refresh tokens refreshed"
+    }
+
+    # Set cookie on the client
+    client.cookies.set("refresh-token", refresh_token)
+
+    response = await client.get("/api/v1/auth/refresh")
+
+    assert response.status_code == 200
+
+    assert response.json() == {"message": "Session and refresh tokens refreshed"}
+
+    mock_refresh_token.assert_awaited_once_with(
+        refresh_token,
+        session,
+    )
