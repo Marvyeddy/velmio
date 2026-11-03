@@ -13,7 +13,7 @@ def create_email_verification_token(user_id: str) -> str:
     return serializer.dumps({"user_id": user_id})
 
 
-def verifiy_email_verification_token(token: str) -> str | None:
+def verify_email_verification_token(token: str) -> str | None:
 
     try:
         data = serializer.loads(token, max_age=1800)

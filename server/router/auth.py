@@ -5,12 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.controllers.auth import (
     forgot_password_controller,
     resend_email_verification_controller,
+    reset_password_controller,
     signin_controller,
     signup_controller,
     verify_email_controller,
 )
 from server.external.database import get_session
-from server.schemas.users import EmailRequest, UserCreate, UserLogin
+from server.schemas.users import EmailRequest, PasswordRequest, UserCreate, UserLogin
 
 
 auth_router = APIRouter()
@@ -50,7 +51,8 @@ async def resend_email_verification_router(
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
 
-    return await resend_email_verification_controller(bg, email, session)
+    email_dict = email.model_dump()
+    return await resend_email_verification_controller(bg, email_dict["email"], session)
 
 
 @auth_router.post("/forgot-password")
@@ -60,4 +62,16 @@ async def forgot_password_router(
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
 
-    return await forgot_password_controller(bg, email, session)
+    email_dict = email.model_dump()
+    return await forgot_password_controller(bg, email_dict["email"], session)
+
+
+@auth_router.post("/reset-password")
+async def reset_password_router(
+    password: PasswordRequest,
+    token: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+
+    password_dict = password.model_dump()
+    return await reset_password_controller(password_dict["password"], token, session)

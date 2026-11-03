@@ -17,3 +17,7 @@ class UserLogin(BaseModel):
 
 class EmailRequest(BaseModel):
     email: Annotated[EmailStr, Field(description="The user's email address")]
+
+
+class PasswordRequest(BaseModel):
+    password: Annotated[str, Field(description="The new proposed password")]

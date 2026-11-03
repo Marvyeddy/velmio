@@ -5,8 +5,8 @@ from server.constants import REFRESH_EXPIRY, SESSION_EXPIRY
 from server.errors import (
     EmailAlreadyVerified,
     InvalidCredentials,
+    InvalidToken,
     InvalidVerificationToken,
-    UnauthorizedCookie,
     UserAlreadyExists,
     UserNotFound,
 )
@@ -17,7 +17,7 @@ from server.utils.hashing import verify_pwd
 from server.utils.jwt_token import create_refresh, create_session
 from server.utils.verification_tokens import (
     create_email_verification_token,
-    verifiy_email_verification_token,
+    verify_email_verification_token,
 )
 from server.core.config import config as cfg
 from server.core.logging import get_app_logger
@@ -153,7 +153,7 @@ async def signin_controller(user_data: UserLogin, session: AsyncSession):
 async def verify_email_controller(token: str, session: AsyncSession):
 
     logger.info("Email verification attempt started.")
-    user_id = verifiy_email_verification_token(token)
+    user_id = verify_email_verification_token(token)
 
     if not user_id:
         logger.warning("Email verification failed: Invalid or expired token.")
@@ -267,6 +267,30 @@ async def forgot_password_controller(
     return {"message": "Reset link has been sent to your email"}
 
 
-async def refresh_token_controller(refresh_cookie: str, session: AsyncSession):
+async def reset_password_controller(
+    password: str,
+    token: str,
+    session: AsyncSession,
+):
+    logger.info("Reset password started")
 
-    pass
+    user_id = verify_email_verification_token(token)
+
+    if not user_id:
+        raise InvalidToken()
+
+    user = await auth_service.get_user_by_id(user_id, session)
+
+    if not user:
+        logger.warning("Password reset failed: User not found")
+        raise UserNotFound()
+
+    # Update password
+    await auth_service.update_user(
+        user=user,
+        user_data={"password": password},
+        session=session,
+    )
+    logger.info("Password reset completed for user ID: %s", user.id)
+
+    return {"message": "Password reset successfully"}

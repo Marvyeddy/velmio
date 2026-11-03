@@ -10,7 +10,6 @@ from server.controllers.auth import (
     verify_email_controller,
 )
 from server.errors import EmailAlreadyVerified, InvalidVerificationToken
-from server.external.email import send_email
 from server.models.user import User
 from server.utils.verification_tokens import create_email_verification_token
 
