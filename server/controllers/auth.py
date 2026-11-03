@@ -1,3 +1,4 @@
+from typing import Any
 from fastapi import BackgroundTasks, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,7 @@ from server.errors import (
     UserAlreadyExists,
     UserNotFound,
 )
+from server.external.blocklist import add_token_to_blocklist, get_remaining_expiry
 from server.external.email import send_email
 from server.schemas.users import UserCreate, UserLogin
 from server.services.auth import AuthService
@@ -296,33 +298,45 @@ async def reset_password_controller(
     return {"message": "Password reset successfully"}
 
 
-async def refresh_token_controller(refresh_token: str, session: AsyncSession):
+async def refresh_token_controller(
+    refresh_token: str,
+    session: AsyncSession,
+):
+    logger.info("Refresh token request received")
 
-    token = refresh_token
-
-    if not token:
+    if not refresh_token:
         logger.warning("No refresh token provided")
         raise InvalidToken()
 
-    token_data = decode_token(token)
+    token_data = decode_token(refresh_token)
 
     if not token_data:
-        logger.warning("Failed to decode refresh token")
+        logger.warning("Invalid or expired refresh token")
         raise InvalidToken()
 
-    if token_data.get("type") != "refresh" or "sub" not in token_data:
-        logger.warning("Invalid refresh token provided or missing subject")
+    if token_data.get("type") != "refresh":
+        logger.warning("Invalid token type for refresh")
         raise InvalidToken()
 
-    user_id = token_data["sub"]
+    user_id = token_data.get("sub")
+    jti = token_data.get("jti")
 
-    user = await auth_service.get_user_by_id(user_id, session)
-    if not user:
-        logger.warning(f"User not found for refresh token: {user_id}")
+    if not user_id or not jti:
+        logger.warning("Refresh token missing required claims")
         raise InvalidToken()
 
-    if user and getattr(user, "is_active", None) is False:
-        logger.warning(f"Inactive user attempted token refresh: {user_id}")
+    expiry = get_remaining_expiry(token_data)
+
+    if expiry <= 0:
+        raise InvalidToken()
+
+    user = await auth_service.get_user_by_id(
+        user_id,
+        session,
+    )
+
+    if not user or not user.is_active:
+        logger.warning("Refresh rejected: invalid or inactive user")
         raise InvalidToken()
 
     new_token_dict = {
@@ -330,8 +344,15 @@ async def refresh_token_controller(refresh_token: str, session: AsyncSession):
         "email": user.email,
     }
 
+    # Prepare replacement tokens
     new_session_token = create_session(new_token_dict)
     new_refresh_token = create_refresh(new_token_dict)
+
+    consumed = await add_token_to_blocklist(jti, expiry)
+
+    if not consumed:
+        logger.warning("Refresh token already used or revoked")
+        raise InvalidToken()
 
     response = JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -344,18 +365,84 @@ async def refresh_token_controller(refresh_token: str, session: AsyncSession):
         key="session-token",
         value=new_session_token,
         max_age=SESSION_EXPIRY,
+        path="/",
         samesite="lax",
         httponly=True,
-        secure=False,  # True in production
+        secure=True,
     )
 
     response.set_cookie(
         key="refresh-token",
         value=new_refresh_token,
         max_age=REFRESH_EXPIRY,
+        path="/",
         samesite="lax",
         httponly=True,
-        secure=False,  # True in production
+        secure=True,
+    )
+
+    logger.info(
+        "Tokens refreshed successfully for user ID: %s",
+        user.id,
+    )
+
+    return response
+
+
+async def signout_controller(
+    session_token: str | None,
+    refresh_token: str | None,
+):
+    logger.info("Signout request received")
+
+    tokens_to_revoke: dict[str, int] = {}
+
+    for token, expected_type in (
+        (session_token, "session"),
+        (refresh_token, "refresh"),
+    ):
+        if not token:
+            continue
+
+        token_data = decode_token(token)
+
+        if not token_data:
+            continue
+
+        if token_data.get("type") != expected_type:
+            continue
+
+        jti = token_data.get("jti")
+
+        if not jti:
+            continue
+
+        expiry = get_remaining_expiry(token_data)
+
+        if expiry > 0:
+            tokens_to_revoke[jti] = expiry
+
+    for jti, expiry in tokens_to_revoke.items():
+        await add_token_to_blocklist(jti, expiry)
+
+    response = JSONResponse(
+        content={"message": "Logged out successfully"},
+        status_code=status.HTTP_200_OK,
+    )
+
+    response.delete_cookie(
+        key="session-token",
+        path="/",
+    )
+
+    response.delete_cookie(
+        key="refresh-token",
+        path="/",
+    )
+
+    logger.info(
+        "Logout successful. revoked_tokens=%s",
+        len(tokens_to_revoke),
     )
 
     return response

@@ -8,6 +8,7 @@ from server.controllers.auth import (
     resend_email_verification_controller,
     reset_password_controller,
     signin_controller,
+    signout_controller,
     signup_controller,
     verify_email_controller,
 )
@@ -85,3 +86,12 @@ async def refresh_token_router(
 ):
 
     return await refresh_token_controller(refresh_token, session)
+
+
+@auth_router.get("/signout")
+async def signout_router(
+    session_token: Annotated[str | None, Cookie(alias="session-token")] = None,
+    refresh_token: Annotated[str | None, Cookie(alias="refresh-token")] = None,
+):
+
+    return await signout_controller(session_token, refresh_token)

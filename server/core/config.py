@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     JWT_KEY: str = Field(..., alias="JWT_KEY")
     FRONTEND_URL: str = Field(..., alias="FRONTEND_URL")
     JWT_ALG: str = Field(..., alias="JWT_ALG")
+    REDIS_URL: str = Field(..., alias="REDIS_URL")
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore"

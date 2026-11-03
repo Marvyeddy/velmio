@@ -146,3 +146,32 @@ async def test_refresh_token_router(
         refresh_token,
         session,
     )
+
+
+@pytest.mark.asyncio
+@patch(
+    "server.router.auth.signout_controller",
+    new_callable=AsyncMock,
+)
+async def test_signout_router(
+    mock_signout,
+    client,
+):
+    session_token = "mock-session-token"
+    refresh_token = "mock-refresh-token"
+
+    mock_signout.return_value = {"message": "Logged out successfully"}
+
+    client.cookies.set("session-token", session_token)
+    client.cookies.set("refresh-token", refresh_token)
+
+    response = await client.get("/api/v1/auth/signout")
+
+    assert response.status_code == 200
+
+    assert response.json() == {"message": "Logged out successfully"}
+
+    mock_signout.assert_awaited_once_with(
+        session_token,
+        refresh_token,
+    )
