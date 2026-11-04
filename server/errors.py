@@ -52,6 +52,12 @@ class InvalidToken(VelmioException):
     pass
 
 
+class EmailNotVerified(VelmioException):
+    """Email not verified"""
+
+    pass
+
+
 def create_exception_handler(
     status_code: int, content: Any
 ) -> Callable[[Request, Exception], JSONResponse]:
@@ -139,5 +145,15 @@ def require_error(app: FastAPI):
         create_exception_handler(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"message": "Invalid token was provided"},
+        ),
+    )
+
+    app.add_exception_handler(
+        EmailNotVerified,
+        create_exception_handler(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={
+                "message": "Please verify your email address to access this resource."
+            },
         ),
     )
