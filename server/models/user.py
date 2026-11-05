@@ -1,7 +1,11 @@
 from datetime import UTC, datetime
 import uuid
-from sqlmodel import SQLModel, Field
+from sqlmodel import Relationship, SQLModel, Field
 import sqlalchemy as sa
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from server.models.document import Document
 
 
 class User(SQLModel, table=True):
@@ -37,6 +41,9 @@ class User(SQLModel, table=True):
             "server_default": sa.func.now(),
             "onupdate": sa.func.now(),
         },
+    )
+    documents: list["Document"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"passive_deletes": True}
     )
 
     def __repr__(self) -> str:

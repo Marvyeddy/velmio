@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     JWT_ALG: str = Field(..., alias="JWT_ALG")
     REDIS_URL: str = Field(..., alias="REDIS_URL")
     COOKIE_SECURE: bool = Field(default=False, alias="COOKIE_SECURE")
+    GOOGLE_API_KEY: str = Field(..., alias="GOOGLE_API_KEY")
+    TAVILY_API_KEY: str = Field(..., alias="TAVILY_API_KEY")
+    WEATHER_API_KEY: str = Field(..., alias="WEATHER_API_KEY")
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore"

@@ -64,5 +64,8 @@ jobs:
             FRONTEND_URL: "http://localhost:3000"
             REDIS_URL: "redis://localhost:6379/0"
             COOKIE_SECURE: false
+            GOOGLE_API_KEY: "google-api-key"
+            TAVILY_API_KEY: "tavily-api-key"
+            WEATHER_API_KEY: "weather-api_key"
         run: |
             uv run pytest -v
