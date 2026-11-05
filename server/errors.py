@@ -144,7 +144,9 @@ def require_error(app: FastAPI):
         InvalidToken,
         create_exception_handler(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"message": "Invalid token was provided"},
+            content={
+                "message": "Invalid token was provided or token has been revoked."
+            },
         ),
     )
 
