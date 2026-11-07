@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from server.models.document import Document
+    from server.models.conversation import Conversation
 
 
 class User(SQLModel, table=True):
@@ -43,6 +44,9 @@ class User(SQLModel, table=True):
         },
     )
     documents: list["Document"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"passive_deletes": True}
+    )
+    conversations: list["Conversation"] = Relationship(
         back_populates="user", sa_relationship_kwargs={"passive_deletes": True}
     )
 
