@@ -1,7 +1,10 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import sys
 import asyncio
 
+from server.ai.agent import create_agent
+from server.ai.memory import create_ai_memory
 from server.errors import require_error
 from server.router.auth import auth_router
 
@@ -10,6 +13,15 @@ version = "v1"
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with create_ai_memory() as (checkpointer, store):
+        app.state.agent = create_agent(checkpointer=checkpointer, store=store)
+
+        yield
+
 
 app = FastAPI(
     title="Velmio",
@@ -22,6 +34,7 @@ app = FastAPI(
         "name": "MIT",
         "url": "https://opensource.org",
     },
+    lifespan=lifespan,
 )
 
 require_error(app)
