@@ -58,6 +58,12 @@ class EmailNotVerified(VelmioException):
     pass
 
 
+class ConversationNotFound(VelmioException):
+    """Conversation not found"""
+
+    pass
+
+
 def create_exception_handler(
     status_code: int, content: Any
 ) -> Callable[[Request, Exception], JSONResponse]:
@@ -157,5 +163,13 @@ def require_error(app: FastAPI):
             content={
                 "message": "Please verify your email address to access this resource."
             },
+        ),
+    )
+
+    app.add_exception_handler(
+        ConversationNotFound,
+        create_exception_handler(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Conversation not found"},
         ),
     )
