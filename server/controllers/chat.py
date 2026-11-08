@@ -37,4 +37,4 @@ async def chat_controller(
 
     ai_message = result["messages"][-1]
 
-    return ChatResponse(thread_id=conversation.id, response=str(ai_message.content))
+    return ChatResponse(thread_id=conversation.id, response=str(ai_message.text))
