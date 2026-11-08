@@ -8,6 +8,7 @@ from server.ai.memory import create_ai_memory
 from server.errors import require_error
 from server.router.auth import auth_router
 from server.router.chat import chat_router
+from server.router.conversations import conversation_router
 
 version = "v1"
 
@@ -48,3 +49,6 @@ async def root():
 
 app.include_router(auth_router, prefix=f"/api/{version}/auth", tags=["Auth"])
 app.include_router(chat_router, prefix=f"/api/{version}/chat", tags=["Chat"])
+app.include_router(
+    conversation_router, prefix=f"/api/{version}/conversations", tags=["Conversations"]
+)

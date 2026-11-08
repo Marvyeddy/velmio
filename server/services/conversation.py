@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.models.conversation import Conversation
+from typing import List
 
 
 class ConversationService:
@@ -47,6 +48,22 @@ class ConversationService:
         session.add(conversation)
         await session.commit()
         await session.refreeh()
+
+    async def get_user_conversations(
+        self,
+        user_id: uuid.UUID,
+        session: AsyncSession,
+    ) -> List[Conversation]:
+
+        statements = (
+            select(Conversation)
+            .where(Conversation.user_id == user_id)
+            .order_by(Conversation.updated_at.desc())
+        )
+
+        result = await session.execute(statements)
+
+        return list(result.scalars().all())
 
 
 conversation_service = ConversationService()

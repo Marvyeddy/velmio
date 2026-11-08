@@ -26,7 +26,7 @@ async def chat_controller(
         )
 
     config = {
-        "configurable": {"thread_id": str(conversation.id)},
+        "configurable": {"thread_id": str(conversation.id), "user_id": str(user.id)},
         "recursion_limit": 25,
     }
 
