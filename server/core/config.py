@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = Field(..., alias="GOOGLE_API_KEY")
     TAVILY_API_KEY: str = Field(..., alias="TAVILY_API_KEY")
     WEATHER_API_KEY: str = Field(..., alias="WEATHER_API_KEY")
+    CLOUDINARY_CLOUD_NAME: str = Field(..., alias="CLOUDINARY_CLOUD_NAME")
+    CLOUDINARY_API_KEY: str = Field(..., alias="CLOUDINARY_API_KEY")
+    CLOUDINARY_API_SECRET: str = Field(..., alias="CLOUDINARY_API_SECRET")
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore"

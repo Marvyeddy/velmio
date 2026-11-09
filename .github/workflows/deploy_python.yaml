@@ -67,5 +67,8 @@ jobs:
             GOOGLE_API_KEY: "google-api-key"
             TAVILY_API_KEY: "tavily-api-key"
             WEATHER_API_KEY: "weather-api_key"
+            CLOUDINARY_CLOUD_NAME: "your_cloud_name"
+            CLOUDINARY_API_KEY: "your_api_key"
+            CLOUDINARY_API_SECRET: "your_api_secret"
         run: |
             uv run pytest -v

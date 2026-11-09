@@ -30,6 +30,14 @@ class Document(SQLModel, table=True):
     )
     filename: str = Field(nullable=False, max_length=255)
     file_type: str = Field(nullable=False, max_length=10)
+    cloudinary_public_id: str | None = Field(
+        default=None,
+        max_length=500,
+    )
+    file_size: int | None = Field(
+        default=None,
+        ge=0,
+    )
     status: DocumentStatus = Field(
         default=DocumentStatus.PENDING,
         sa_column=Column(
@@ -49,6 +57,11 @@ class Document(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         nullable=False,
         sa_column_kwargs={"server_default": sa.func.now()},
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        nullable=False,
+        sa_column_kwargs={"server_default": sa.func.now(), "onupdate": sa.func.now()},
     )
 
     user: "User" = Relationship(back_populates="documents")
