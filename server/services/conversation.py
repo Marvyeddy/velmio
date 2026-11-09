@@ -65,5 +65,13 @@ class ConversationService:
 
         return list(result.scalars().all())
 
+    async def delete_conversation(
+        self,
+        conversation: Conversation,
+        session: AsyncSession,
+    ) -> None:
+        await session.delete(conversation)
+        await session.commit()
+
 
 conversation_service = ConversationService()

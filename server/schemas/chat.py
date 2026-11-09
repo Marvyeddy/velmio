@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 import uuid
 
 
@@ -30,3 +30,17 @@ class ConversationMessage(BaseModel):
 
 class ConversationDetailResponse(ConversationResponse):
     messages: list[ConversationMessage]
+
+
+class ConversationUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        title = value.strip()
+
+        if not title:
+            raise ValueError("Conversation title cannot be empty")
+
+        return title
