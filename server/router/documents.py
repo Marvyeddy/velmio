@@ -8,10 +8,7 @@ from server.dependencies.current_user import get_current_user
 from server.external.database import get_session
 from server.models.user import User
 
-document_router = APIRouter(
-    prefix="/api/v1/documents",
-    tags=["Documents"],
-)
+document_router = APIRouter()
 
 
 @document_router.post("/upload")

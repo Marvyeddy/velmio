@@ -3,6 +3,10 @@ import uuid
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.ai.rag.vectorstore import (
+    delete_document_vectors,
+    index_document,
+)
 from server.core.logging import get_app_logger
 from server.external.cloudinary import (
     delete_document_from_cloudinary,
@@ -26,7 +30,6 @@ async def upload_document_controller(
     user_id: uuid.UUID,
     session: AsyncSession,
 ):
-    # 1. Validate before creating any database record.
     try:
         file_bytes, filename, extension = await validate_document(file)
     except DocumentProcessingError as exc:
@@ -37,7 +40,6 @@ async def upload_document_controller(
     finally:
         await file.close()
 
-    # 2. Create the document record.
     document = await create_document_record(
         user_id=user_id,
         filename=filename,
@@ -47,9 +49,10 @@ async def upload_document_controller(
     )
 
     cloudinary_public_id = None
+    chunk_count = 0
 
     try:
-        # 3. Upload the original file to Cloudinary.
+        # Upload original document.
         result = await upload_document_to_cloudinary(
             file_bytes=file_bytes,
             document_id=str(document.id),
@@ -57,7 +60,6 @@ async def upload_document_controller(
 
         cloudinary_public_id = result["public_id"]
 
-        # 4. Mark the document as processing.
         await update_document_record(
             document=document,
             session=session,
@@ -65,26 +67,37 @@ async def upload_document_controller(
             cloudinary_public_id=cloudinary_public_id,
         )
 
-        # 5. Extract and split the document.
+        # Extract and split document.
         chunks, document_units = await process_document_bytes(
             file_bytes=file_bytes,
             filename=filename,
             extension=extension,
         )
 
-        # 6. Record the extracted chunk count.
-        # Do not mark COMPLETED until Pinecone indexing succeeds.
+        chunk_count = len(chunks)
+
+        if chunk_count == 0:
+            raise DocumentProcessingError("The document contains no extractable text.")
+
+        # Generate embeddings and index in Pinecone.
+        await index_document(
+            chunks=chunks,
+            document_id=document.id,
+            user_id=user_id,
+        )
+
+        # Mark completed only after successful indexing.
         await update_document_record(
             document=document,
             session=session,
-            status=DocumentStatus.PROCESSING,
-            chunk_count=len(chunks),
+            status=DocumentStatus.COMPLETED,
+            chunk_count=chunk_count,
         )
 
         logger.info(
-            "Document %s processed into %s chunks",
+            "Document %s indexed successfully with %s chunks",
             document.id,
-            len(chunks),
+            chunk_count,
         )
 
         return {
@@ -92,14 +105,12 @@ async def upload_document_controller(
             "filename": filename,
             "file_type": extension.lstrip("."),
             "document_units": document_units,
-            "chunk_count": len(chunks),
-            "status": DocumentStatus.PROCESSING.value,
-            "message": (
-                "Document uploaded and text extracted. Vector indexing is pending."
-            ),
+            "chunk_count": chunk_count,
+            "status": DocumentStatus.COMPLETED.value,
+            "message": "Document uploaded and indexed successfully.",
         }
 
-    except Exception:
+    except Exception as exc:
         logger.exception(
             "Document processing failed: %s",
             document.id,
@@ -107,6 +118,30 @@ async def upload_document_controller(
 
         await session.rollback()
 
+        # Remove any partially indexed vectors.
+        if chunk_count:
+            try:
+                await delete_document_vectors(
+                    document_id=document.id,
+                    chunk_count=chunk_count,
+                )
+            except Exception:
+                logger.exception(
+                    "Pinecone cleanup failed for document %s",
+                    document.id,
+                )
+
+        # Remove original file if it was uploaded.
+        if cloudinary_public_id:
+            try:
+                await delete_document_from_cloudinary(cloudinary_public_id)
+            except Exception:
+                logger.exception(
+                    "Cloudinary cleanup failed for document %s",
+                    document.id,
+                )
+
+        # Mark database record as failed.
         try:
             await update_document_record(
                 document=document,
@@ -115,20 +150,17 @@ async def upload_document_controller(
             )
         except Exception:
             logger.exception(
-                "Unable to mark document %s as failed",
+                "Failed to update status for document %s",
                 document.id,
             )
 
-        if cloudinary_public_id:
-            try:
-                await delete_document_from_cloudinary(cloudinary_public_id)
-            except Exception:
-                logger.exception(
-                    "Cloudinary cleanup failed for %s",
-                    document.id,
-                )
+        if isinstance(exc, DocumentProcessingError):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(exc),
+            ) from exc
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to process the uploaded document.",
-        )
+        ) from exc
