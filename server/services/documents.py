@@ -2,6 +2,7 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
+import uuid
 
 from fastapi import UploadFile
 from langchain_core.documents import Document
@@ -12,12 +13,18 @@ from langchain_community.document_loaders import (
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from server.models.document import DocumentStatus
+from server.core.logging import get_app_logger
 
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 MAX_PDF_PAGES = 200
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".csv"}
+
+logger = get_app_logger(__name__)
 
 
 class DocumentProcessingError(Exception):
@@ -88,27 +95,26 @@ def load_and_split_document(
             raise DocumentProcessingError("No extractable text found in this document.")
 
         return chunks, len(documents)
-
     except DocumentProcessingError:
         raise
-
     except Exception as exc:
         raise DocumentProcessingError("Unable to process this document.") from exc
 
 
-async def process_document(
-    file: UploadFile,
-) -> tuple[list[Document], int]:
-    """Validate an upload and process it using LangChain."""
+async def validate_document(file: UploadFile) -> tuple[bytes, str, str]:
+    """Read and validate an uploaded PDF, DOCX, or CSV."""
 
     if not file.filename:
         raise DocumentProcessingError("A filename is required.")
 
-    filename = Path(file.filename).name
+    filename = Path(file.filename.replace("\\", "/")).name
     extension = Path(filename).suffix.lower()
 
     if extension not in SUPPORTED_EXTENSIONS:
         raise DocumentProcessingError("Only PDF, DOCX, and CSV files are supported.")
+
+    if len(filename) > 255:
+        raise DocumentProcessingError("Filename is too long.")
 
     file_bytes = await file.read(MAX_FILE_SIZE + 1)
 
@@ -116,14 +122,31 @@ async def process_document(
         raise DocumentProcessingError("The uploaded file is empty.")
 
     if len(file_bytes) > MAX_FILE_SIZE:
-        raise DocumentProcessingError("File size cannot exceed 10 MB.")
+        raise DocumentProcessingError("File cannot exceed 10 MB.")
 
-    # Basic file signature validation.
     if extension == ".pdf" and not file_bytes.startswith(b"%PDF-"):
         raise DocumentProcessingError("Invalid PDF file.")
 
-    if extension == ".docx" and not file_bytes.startswith(b"PK"):
-        raise DocumentProcessingError("Invalid DOCX file.")
+    if extension == ".docx":
+        import io
+        import zipfile
+
+        try:
+            with zipfile.ZipFile(io.BytesIO(file_bytes)) as archive:
+                if "word/document.xml" not in archive.namelist():
+                    raise DocumentProcessingError("Invalid DOCX file.")
+        except zipfile.BadZipFile as exc:
+            raise DocumentProcessingError("Invalid DOCX file.") from exc
+
+    return file_bytes, filename, extension
+
+
+async def process_document_bytes(
+    file_bytes: bytes,
+    filename: str,
+    extension: str,
+) -> tuple[list[Document], int]:
+    """Load and split previously validated document bytes."""
 
     temp_path = None
 
@@ -141,9 +164,58 @@ async def process_document(
             extension,
             filename,
         )
+
     finally:
         if temp_path is not None:
             try:
                 os.unlink(temp_path)
             except OSError:
-                pass
+                logger.warning(
+                    "Failed to remove temporary document: %s",
+                    temp_path,
+                )
+
+
+async def create_document_record(
+    user_id: uuid.UUID,
+    filename: str,
+    file_type: str,
+    file_size: int,
+    session: AsyncSession,
+) -> Document:
+    document = Document(
+        user_id=user_id,
+        filename=filename,
+        file_type=file_type,
+        file_size=file_size,
+        status=DocumentStatus.PENDING,
+    )
+
+    session.add(document)
+    await session.commit()
+    await session.refresh(document)
+
+    return document
+
+
+async def update_document_record(
+    document: Document,
+    session: AsyncSession,
+    *,
+    status: DocumentStatus,
+    cloudinary_public_id: str | None = None,
+    chunk_count: int | None = None,
+) -> Document:
+    document.status = status
+
+    if cloudinary_public_id is not None:
+        document.cloudinary_public_id = cloudinary_public_id
+
+    if chunk_count is not None:
+        document.chunk_count = chunk_count
+
+    session.add(document)
+    await session.commit()
+    await session.refresh(document)
+
+    return document
