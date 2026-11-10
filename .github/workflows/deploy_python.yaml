@@ -72,5 +72,6 @@ jobs:
             CLOUDINARY_API_SECRET: "your_api_secret"
             PINECONE_API_KEY: ${{secrets.PINECONE_API_KEY}}
             PINECONE_INDEX_NAME: ${{secrets.PINECONE_INDEX_NAME}}
+            CELERY_BROKER_URL: "redis://localhost:6379/0"
         run: |
             uv run pytest -v

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str = Field(..., alias="CLOUDINARY_API_SECRET")
     PINECONE_API_KEY: str = Field(..., alias="PINECONE_API_KEY")
     PINECONE_INDEX_NAME: str = Field(..., alias="PINECONE_INDEX_NAME")
+    CELERY_BROKER_URL: str = Field(..., alias="CELERY_BROKER_URL")
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore"

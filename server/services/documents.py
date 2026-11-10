@@ -16,6 +16,7 @@ from io import BytesIO
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from server.models.document import DocumentStatus
 from server.core.logging import get_app_logger
@@ -219,3 +220,42 @@ async def update_document_record(
     await session.refresh(document)
 
     return document
+
+
+async def get_user_documents(
+    user_id: uuid.UUID,
+    session: AsyncSession,
+) -> list[Document]:
+    statement = (
+        select(Document)
+        .where(
+            Document.user_id == user_id,
+            Document.status != DocumentStatus.DELETING,
+        )
+        .order_by(Document.created_at.desc())
+    )
+
+    result = await session.execute(statement)
+    return list(result.scalars().all())
+
+
+async def get_user_document(
+    document_id: uuid.UUID,
+    user_id: uuid.UUID,
+    session: AsyncSession,
+) -> Document | None:
+    statement = select(Document).where(
+        Document.id == document_id,
+        Document.user_id == user_id,
+    )
+
+    result = await session.execute(statement)
+    return result.scalar_one_or_none()
+
+
+async def delete_document_record(
+    document: Document,
+    session: AsyncSession,
+) -> None:
+    await session.delete(document)
+    await session.commit()

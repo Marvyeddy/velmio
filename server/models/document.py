@@ -14,6 +14,7 @@ class DocumentStatus(StrEnum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    DELETING = "deleting"
 
 
 class Document(SQLModel, table=True):
