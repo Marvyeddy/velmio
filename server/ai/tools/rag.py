@@ -4,6 +4,10 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from server.ai.rag.vectorstore import search_user_documents
+from server.core.logging import get_app_logger
+
+
+logger = get_app_logger(__name__)
 
 
 @tool
@@ -11,50 +15,46 @@ async def search_documents(
     query: str,
     config: RunnableConfig,
 ) -> str:
-    """
-    Search the authenticated user's uploaded documents.
-
-    Use this tool when the user asks questions about
-    uploaded PDFs, DOCX files, CSV files, or information
-    contained in their documents.
-    """
+    """Search the authenticated user's uploaded documents."""
 
     user_id = config.get("configurable", {}).get("user_id")
 
     if not user_id:
-        return "Document search is unavailable: user context is missing."
+        return "Document search is unavailable for this request."
 
     try:
         user_uuid = uuid.UUID(str(user_id))
-    except ValueError:
-        return "Document search is unavailable: invalid user context."
 
-    documents = await search_user_documents(
-        query=query,
-        user_id=user_uuid,
-        limit=5,
-    )
-
-    if not documents:
-        return "No relevant information was found in your uploaded documents."
-
-    formatted_results = []
-
-    for index, document in enumerate(documents, start=1):
-        filename = document.metadata.get(
-            "filename",
-            "Unknown document",
+        documents = await search_user_documents(
+            query=query,
+            user_id=user_uuid,
+            limit=5,
         )
 
-        page = document.metadata.get("page")
+        if not documents:
+            return "No relevant information was found in your documents."
 
-        source = f"Document: {filename}"
+        results = []
 
-        if page is not None:
-            source += f", page {int(page) + 1}"
+        for index, document in enumerate(documents, start=1):
+            filename = document.metadata.get("source", "Unknown document")
 
-        formatted_results.append(
-            f"[Source {index}]\n{source}\nContent:\n{document.page_content}"
-        )
+            page = document.metadata.get("page")
 
-    return "\n\n".join(formatted_results)
+            page_reference = (
+                f"Page {page + 1}" if isinstance(page, int) else "Page unavailable"
+            )
+
+            results.append(
+                f"Result {index}\n"
+                f"Source: {filename}\n"
+                f"Location: {page_reference}\n"
+                f"Content:\n{document.page_content}"
+            )
+
+        return "\n\n---\n\n".join(results)
+
+    except Exception:
+        logger.exception("Document retrieval failed")
+
+        return "Document search is temporarily unavailable. Please try again later."

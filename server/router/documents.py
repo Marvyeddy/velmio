@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.controllers.documents import (
     delete_document_controller,
+    get_document_status_controller,
     list_documents_controller,
     upload_document_controller,
 )
@@ -51,6 +52,19 @@ async def delete_document(
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
     return await delete_document_controller(
+        document_id=document_id,
+        user_id=user.id,
+        session=session,
+    )
+
+
+@document_router.get("/{document_id}/status")
+async def get_document_status(
+    document_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    return await get_document_status_controller(
         document_id=document_id,
         user_id=user.id,
         session=session,

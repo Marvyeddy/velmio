@@ -3,6 +3,7 @@ from io import BytesIO
 
 import cloudinary
 import cloudinary.uploader
+import httpx
 
 from server.core.config import config as cfg
 
@@ -59,3 +60,16 @@ async def delete_document_from_cloudinary(
 
     if result.get("result") not in ("ok", "not found"):
         raise RuntimeError("Cloudinary document deletion failed.")
+
+
+async def download_document_from_cloudinary(public_id: str) -> bytes:
+
+    url, _ = cloudinary.utils.cloudinary_url(
+        public_id, resource_type="raw", type="authenticated", sign_url=True, secure=True
+    )
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+
+        return response.content

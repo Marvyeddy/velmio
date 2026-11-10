@@ -54,6 +54,12 @@ class Document(SQLModel, table=True):
         ),
     )
     chunk_count: int = Field(default=0, ge=0)
+    processing_started_at: datetime | None = Field(default=None)
+    processing_attempts: int = Field(default=0)
+    processing_attempt_id: uuid.UUID | None = Field(
+        default=None,
+        index=True,
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         nullable=False,

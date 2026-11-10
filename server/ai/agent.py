@@ -14,7 +14,7 @@ from server.core.config import config as cfg
 from typing import Annotated, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START
-from server.ai.prompt import system_prompt
+from server.ai.prompt import SYSTEM_PROMPT
 
 
 class AgentState(TypedDict):
@@ -37,7 +37,7 @@ llm_with_tool = llm.bind_tools(tools)
 
 
 def chatbot(state: AgentState):
-    response = llm_with_tool.invoke([system_prompt, *state["messages"]])
+    response = llm_with_tool.invoke([SYSTEM_PROMPT, *state["messages"]])
     return {"messages": [response]}
 
 
