@@ -5,18 +5,21 @@ from pathlib import Path
 import uuid
 
 from fastapi import UploadFile
-from langchain_core.documents import Document
+from langchain_core.documents import Document as LangDocument
 from langchain_community.document_loaders import (
     CSVLoader,
     Docx2txtLoader,
     PyPDFLoader,
 )
+from zipfile import ZipFile, BadZipFile
+from io import BytesIO
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.models.document import DocumentStatus
 from server.core.logging import get_app_logger
+from server.models.document import Document
 
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -31,7 +34,7 @@ class DocumentProcessingError(Exception):
     """Raised when an uploaded document cannot be processed."""
 
 
-def load_document(file_path: str, extension: str) -> list[Document]:
+def load_document(file_path: str, extension: str) -> list[LangDocument]:
     """Load a document using its appropriate LangChain loader."""
 
     if extension == ".pdf":
@@ -65,7 +68,7 @@ def load_and_split_document(
     file_path: str,
     extension: str,
     filename: str,
-) -> tuple[list[Document], int]:
+) -> tuple[list[LangDocument], int]:
     """Load, normalize metadata, and split the document."""
 
     try:
@@ -128,14 +131,11 @@ async def validate_document(file: UploadFile) -> tuple[bytes, str, str]:
         raise DocumentProcessingError("Invalid PDF file.")
 
     if extension == ".docx":
-        import io
-        import zipfile
-
         try:
-            with zipfile.ZipFile(io.BytesIO(file_bytes)) as archive:
+            with ZipFile(BytesIO(file_bytes)) as archive:
                 if "word/document.xml" not in archive.namelist():
                     raise DocumentProcessingError("Invalid DOCX file.")
-        except zipfile.BadZipFile as exc:
+        except BadZipFile as exc:
             raise DocumentProcessingError("Invalid DOCX file.") from exc
 
     return file_bytes, filename, extension
@@ -145,7 +145,7 @@ async def process_document_bytes(
     file_bytes: bytes,
     filename: str,
     extension: str,
-) -> tuple[list[Document], int]:
+) -> tuple[list[LangDocument], int]:
     """Load and split previously validated document bytes."""
 
     temp_path = None

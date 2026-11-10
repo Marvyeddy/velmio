@@ -76,3 +76,31 @@ async def delete_document_vectors(
         index.delete,
         ids=vector_ids,
     )
+
+
+async def search_user_documents(
+    query: str,
+    user_id: uuid.UUID,
+    document_id: uuid.UUID | None = None,
+    limit: int = 5,
+) -> list[Document]:
+    """Search only documents belonging to the current user."""
+
+    metadata_filter = {"user_id": {"$eq": str(user_id)}}
+
+    if document_id is not None:
+        metadata_filter = {
+            "$and": [
+                {"user_id": {"$eq": str(user_id)}},
+                {"document_id": {"$eq": str(document_id)}},
+            ]
+        }
+
+    results = await asyncio.to_thread(
+        vector_store.similarity_search,
+        query=query,
+        k=limit,
+        filter=metadata_filter,
+    )
+
+    return results

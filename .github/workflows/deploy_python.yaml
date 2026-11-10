@@ -70,7 +70,7 @@ jobs:
             CLOUDINARY_CLOUD_NAME: "your_cloud_name"
             CLOUDINARY_API_KEY: "your_api_key"
             CLOUDINARY_API_SECRET: "your_api_secret"
-            PINECONE_API_KEY: "pinecone-api-key"
-            PINECONE_INDEX_NAME: "pinecone-index-name"
+            PINECONE_API_KEY: ${{secrets.PINECONE_API_KEY}}
+            PINECONE_INDEX_NAME: ${{secrets.PINECONE_INDEX_NAME}}
         run: |
             uv run pytest -v
