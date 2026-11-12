@@ -1,59 +1,71 @@
-version: '3.8'
-
 services:
   api:
-    container_name: velmio
     build: .
+    container_name: velmio-api
     ports:
       - "8000:80"
-    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/postgres
-      - LANGGRAPH_URL=postgresql://postgres:postgres@db:5432/postgres
-      - REDIS_URL=redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/velmio
+      LANGGRAPH_URL: postgresql://postgres:postgres@db:5432/velmio
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
     depends_on:
       db:
-        condition: service-healthy
+        condition: service_healthy
       redis:
-        condition: service-healthy
+        condition: service_healthy
+
+  celery:
+    build: .
+    container_name: velmio-celery
+    command:
+      - celery
+      - -A
+      - server.celery_app:celery_app
+      - worker
+      - --loglevel=info
+      - --concurrency=1
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/velmio
+      LANGGRAPH_URL: postgresql://postgres:postgres@db:5432/velmio
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   db:
-    container_name: postgres-db
     image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: velmio
     ports:
       - "5432:5432"
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d velmio"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-  
+
   redis:
-    container_name: redis
     image: redis:7
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 5s
-    volumes:
-      - redis_data:/data
 
 volumes:
   pg_data:
   redis_data:
-
-    
-    

@@ -1,5 +1,5 @@
 from fastapi import Request
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.ai.title import generate_conversation_title
@@ -11,6 +11,13 @@ from server.core.logging import get_app_logger
 
 
 logger = get_app_logger(__name__)
+
+
+def get_message_text(ai_message: AIMessage) -> str:
+    text = getattr(ai_message, "text", "")
+    if callable(text):
+        text = text()
+    return text if isinstance(text, str) else str(text or "")
 
 
 async def chat_controller(
@@ -58,9 +65,7 @@ async def chat_controller(
 
     ai_message = result["messages"][-1]
 
-    # Extract text correctly.
-    text = ai_message.text
-    response_text = text() if callable(text) else text
+    response_text = get_message_text(ai_message)
 
     # 4. Generate a title for new conversations.
     if is_new_conversation:

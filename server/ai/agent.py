@@ -44,8 +44,10 @@ def chatbot(state: AgentState):
 def create_agent(checkpointer: AsyncPostgresSaver, store: AsyncPostgresStore):
     graph = StateGraph(AgentState)
 
+    tool_node = ToolNode(tools, handle_tool_errors="A tool encountered a problem")
+
     graph.add_node("chatbot", chatbot)
-    graph.add_node("tools", ToolNode(tools))
+    graph.add_node("tools", tool_node)
 
     graph.add_edge(START, "chatbot")
     graph.add_conditional_edges("chatbot", tools_condition)
