@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/velmio
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/velmio
       LANGGRAPH_URL: postgresql://postgres:postgres@db:5432/velmio
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
@@ -30,7 +30,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/velmio
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/velmio
       LANGGRAPH_URL: postgresql://postgres:postgres@db:5432/velmio
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
@@ -60,6 +60,8 @@ services:
     image: redis:7
     volumes:
       - redis_data:/data
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

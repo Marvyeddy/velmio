@@ -1,4 +1,5 @@
 import asyncio
+from functools import lru_cache
 import uuid
 
 from langchain_core.documents import Document
@@ -9,14 +10,18 @@ from server.ai.rag.embedding import embeddings
 from server.core.config import config as cfg
 
 
-pc = Pinecone(api_key=cfg.PINECONE_API_KEY)
+@lru_cache(maxsize=1)
+def get_pinecone_index():
+    pc = Pinecone(api_key=cfg.PINECONE_API_KEY)
+    return pc.Index(name=cfg.PINECONE_INDEX_NAME)
 
-index = pc.Index(name=cfg.PINECONE_INDEX_NAME)
 
-vector_store = PineconeVectorStore(
-    index=index,
-    embedding=embeddings,
-)
+@lru_cache(maxsize=1)
+def get_vector_store() -> PineconeVectorStore:
+    return PineconeVectorStore(
+        index=get_pinecone_index(),
+        embedding=embeddings,
+    )
 
 
 async def index_document(
@@ -53,7 +58,7 @@ async def index_document(
 
     # Run synchronous indexing outside the event loop.
     await asyncio.to_thread(
-        vector_store.add_documents,
+        get_vector_store().add_documents,
         documents=prepared_chunks,
         ids=vector_ids,
     )
@@ -73,7 +78,7 @@ async def delete_document_vectors(
         return
 
     await asyncio.to_thread(
-        index.delete,
+        get_pinecone_index().delete,
         ids=vector_ids,
     )
 
@@ -97,7 +102,7 @@ async def search_user_documents(
         }
 
     results = await asyncio.to_thread(
-        vector_store.similarity_search,
+        get_vector_store().similarity_search,
         query=query,
         k=limit,
         filter=metadata_filter,

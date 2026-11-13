@@ -1,5 +1,5 @@
-import sys
-import asyncio
+from unittest.mock import MagicMock, patch
+from langchain_core.documents import Document
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -9,6 +9,23 @@ from httpx import ASGITransport, AsyncClient
 
 from server.external.database import get_session
 from server.main import app
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def mock_pinecone():
+    mock_index = MagicMock()
+    mock_store = MagicMock()
+    mock_store.similarity_search.return_value = [
+        Document(
+            page_content="Sample test context", metadata={"document_id": "test-id"}
+        )
+    ]
+
+    with (
+        patch("server.ai.rag.vectorstore.get_pinecone_index", return_value=mock_index),
+        patch("server.ai.rag.vectorstore.get_vector_store", return_value=mock_store),
+    ):
+        yield {"index": mock_index, "store": mock_store}
 
 
 @pytest_asyncio.fixture()
