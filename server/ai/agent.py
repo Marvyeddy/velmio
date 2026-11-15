@@ -15,7 +15,7 @@ from typing import Annotated, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START
 from server.ai.prompt import SYSTEM_PROMPT
-from server.ai.tools.tavily import tavily_tool
+from server.ai.tools.tavily import limited_tavily_search
 
 
 # ------ State Definition -------
@@ -35,7 +35,7 @@ tools = [
     update_user_memory,
     delete_user_memory,
     search_documents,
-    tavily_tool,
+    limited_tavily_search,
 ]
 
 # ------- bind llm with tools --------

@@ -4,16 +4,10 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 def extract_text(message: AIMessage | AIMessageChunk) -> str:
     """Extract readable text from Gemini messages and streaming chunks."""
 
-    text_attr = getattr(message, "text", None)
+    text = getattr(message, "text", None)
 
-    if callable(text_attr):
-        value = text_attr()
-
-        if isinstance(value, str):
-            return value
-
-    elif isinstance(text_attr, str):
-        return text_attr
+    if isinstance(text, str):
+        return text
 
     content = getattr(message, "content", "")
 

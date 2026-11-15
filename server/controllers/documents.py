@@ -153,6 +153,7 @@ async def delete_document_controller(
     user_id: uuid.UUID,
     session: AsyncSession,
 ):
+    # 1. Get the document belonging to the authenticated user.
     document = await get_user_document(
         document_id=document_id,
         user_id=user_id,
@@ -165,6 +166,7 @@ async def delete_document_controller(
             detail="Document not found.",
         )
 
+    # 2. Prevent deletion while another operation is running.
     if document.status in (
         DocumentStatus.PENDING,
         DocumentStatus.PROCESSING,
@@ -175,26 +177,49 @@ async def delete_document_controller(
             detail="Document cannot be deleted in its current state.",
         )
 
-    # Mark the document as deleting.
-    await update_document_record(
-        document=document,
-        session=session,
-        status=DocumentStatus.DELETING,
-    )
+    previous_status = document.status
+
+    # Save required information before changing the record.
+    chunk_count = document.chunk_count
+    cloudinary_public_id = document.cloudinary_public_id
 
     try:
-        # Delete indexed chunks from Pinecone.
-        if document.chunk_count > 0:
+        # 3. Mark the document as deleting.
+        await update_document_record(
+            document=document,
+            session=session,
+            status=DocumentStatus.DELETING,
+        )
+
+        logger.info(
+            "Starting deletion for document %s",
+            document_id,
+        )
+
+        # 4. Delete indexed chunks from Pinecone.
+        if chunk_count > 0:
             await delete_document_vectors(
-                document_id=document.id,
-                chunk_count=document.chunk_count,
+                document_id=document_id,
+                chunk_count=chunk_count,
             )
 
-        # Delete the original file from Cloudinary.
-        if document.cloudinary_public_id:
-            await delete_document_from_cloudinary(document.cloudinary_public_id)
+            logger.info(
+                "Deleted Pinecone vectors for document %s",
+                document_id,
+            )
 
-        # Delete PostgreSQL record last.
+        # 5. Delete the original file from Cloudinary.
+        if cloudinary_public_id:
+            await delete_document_from_cloudinary(
+                cloudinary_public_id,
+            )
+
+            logger.info(
+                "Deleted Cloudinary file for document %s",
+                document_id,
+            )
+
+        # 6. Delete the PostgreSQL record last.
         await delete_document_record(
             document=document,
             session=session,
@@ -216,6 +241,25 @@ async def delete_document_controller(
         )
 
         await session.rollback()
+
+        # Restore the previous status so deletion can be retried.
+        # This does not restore any external resources already deleted.
+        try:
+            await session.refresh(document)
+
+            await update_document_record(
+                document=document,
+                session=session,
+                status=previous_status,
+            )
+
+        except Exception:
+            await session.rollback()
+
+            logger.exception(
+                "Failed to restore status for document %s",
+                document_id,
+            )
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

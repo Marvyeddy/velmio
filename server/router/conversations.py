@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, List
 import uuid
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,7 @@ from server.schemas.chat import (
 conversation_router = APIRouter()
 
 
-@conversation_router.get("", response_model=ConversationResponse)
+@conversation_router.get("", response_model=List[ConversationResponse])
 async def list_conversations(
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],

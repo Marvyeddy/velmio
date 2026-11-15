@@ -1,8 +1,13 @@
+import asyncio
 import ssl
+import sys
 
 from celery import Celery
 
 from server.core.config import config as cfg
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 celery_app = Celery(

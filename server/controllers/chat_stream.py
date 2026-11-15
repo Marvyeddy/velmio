@@ -27,7 +27,6 @@ TOOL_LABELS = {
     "get_user_memories": "Retrieving memories",
     "update_user_memory": "Updating memory",
     "delete_user_memory": "Deleting memory",
-    "tavily_search_results_json": "Searching the web",
     "tavily_search": "Searching the web",
 }
 
@@ -70,10 +69,15 @@ async def chat_stream_controller(
 
     thread_id = conversation.id
 
+    search_budget = {
+        "used": 0,
+        "lock": asyncio.Lock(),
+    }
     config = {
         "configurable": {
             "thread_id": str(thread_id),
             "user_id": str(user_id),
+            "search_budget": search_budget,
         },
         "recursion_limit": 25,
     }

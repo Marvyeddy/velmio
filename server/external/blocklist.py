@@ -2,6 +2,8 @@ import math
 from datetime import datetime, timezone
 
 import redis.asyncio as aioredis
+from redis.backoff import ExponentialBackoff
+from redis.retry import Retry
 
 from server.constants import SESSION_EXPIRY
 from server.core.config import config as cfg
@@ -13,6 +15,17 @@ r = aioredis.from_url(
     socket_connect_timeout=5.0,
     socket_timeout=5.0,
     health_check_interval=30,
+    retry=Retry(
+        ExponentialBackoff(
+            cap=2,
+            base=0.1,
+        ),
+        retries=3,
+    ),
+    retry_on_error=[
+        aioredis.ConnectionError,
+        aioredis.TimeoutError,
+    ],
 )
 
 

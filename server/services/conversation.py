@@ -47,7 +47,9 @@ class ConversationService:
 
         session.add(conversation)
         await session.commit()
-        await session.refreeh()
+        await session.refresh(conversation)
+
+        return conversation
 
     async def get_user_conversations(
         self,

@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.controllers.auth import (
@@ -81,9 +81,15 @@ async def reset_password_router(
 
 @auth_router.get("/refresh")
 async def refresh_token_router(
-    refresh_token: Annotated[str, Cookie(alias="refresh-token")],
     session: Annotated[AsyncSession, Depends(get_session)],
+    refresh_token: Annotated[str | None, Cookie(alias="refresh-token")] = None,
 ):
+
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+        )
 
     return await refresh_token_controller(refresh_token, session)
 

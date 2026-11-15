@@ -48,11 +48,9 @@ async def get_conversation_controller(
         text = message.text
 
         if callable(text):
-            value = text()
-            if isinstance(value, str):
-                return value
+            text = text()
 
-        if not text:
+        if not isinstance(text, str) or not text:
             continue
 
         messages.append(

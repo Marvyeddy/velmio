@@ -1,5 +1,6 @@
+import asyncio
 from fastapi import Request
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.ai.title import generate_conversation_title
@@ -43,10 +44,15 @@ async def chat_controller(
         )
 
     # 2. Configure LangGraph.
+    search_budget = {
+        "used": 0,
+        "lock": asyncio.Lock(),
+    }
     config = {
         "configurable": {
             "thread_id": str(conversation.id),
             "user_id": str(user.id),
+            "search_budget": search_budget,
         },
         "recursion_limit": 25,
     }
