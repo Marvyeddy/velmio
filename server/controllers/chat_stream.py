@@ -14,6 +14,7 @@ from server.external.database import AsyncSessionLocal
 from server.models.user import User
 from server.schemas.chat import ChatRequest
 from server.services.conversation import conversation_service
+from server.utils.ai import extract_text
 
 
 logger = get_app_logger(__name__)
@@ -34,34 +35,6 @@ TOOL_LABELS = {
 def format_sse(data: dict) -> str:
     """Format an AI SDK UI Message Stream event."""
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-
-def extract_text(chunk) -> str:
-    """Extract text from LangChain/Gemini streaming chunks."""
-    text_attr = getattr(chunk, "text", None)
-
-    if callable(text_attr):
-        value = text_attr()
-        if isinstance(value, str):
-            return value
-    elif isinstance(text_attr, str):
-        return text_attr
-
-    content = getattr(chunk, "content", "")
-
-    if isinstance(content, str):
-        return content
-
-    if isinstance(content, list):
-        return "".join(
-            block.get("text", "")
-            for block in content
-            if isinstance(block, dict)
-            and block.get("type") == "text"
-            and isinstance(block.get("text"), str)
-        )
-
-    return ""
 
 
 async def chat_stream_controller(
@@ -105,6 +78,7 @@ async def chat_stream_controller(
         "recursion_limit": 25,
     }
 
+    # ---- Stream event ------
     async def generate_events() -> AsyncIterator[str]:
         text_id = None
         active_tools: dict[str, str] = {}

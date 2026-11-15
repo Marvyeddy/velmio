@@ -1,4 +1,4 @@
-from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.messages import BaseMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -15,32 +15,40 @@ from typing import Annotated, TypedDict
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START
 from server.ai.prompt import SYSTEM_PROMPT
+from server.ai.tools.tavily import tavily_tool
 
 
+# ------ State Definition -------
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
 
+# ------ llm -------
 llm = ChatGoogleGenerativeAI(
     model="gemini-3.5-flash-lite", google_api_key=cfg.GOOGLE_API_KEY
 )
 
+# ------- Tools -------
 tools = [
     save_user_memory,
     get_user_memories,
     update_user_memory,
     delete_user_memory,
     search_documents,
+    tavily_tool,
 ]
 
+# ------- bind llm with tools --------
 llm_with_tool = llm.bind_tools(tools)
 
 
+# ------ Node definition --------
 def chatbot(state: AgentState):
     response = llm_with_tool.invoke([SYSTEM_PROMPT, *state["messages"]])
     return {"messages": [response]}
 
 
+# ------ Agent Definition ------
 def create_agent(checkpointer: AsyncPostgresSaver, store: AsyncPostgresStore):
     graph = StateGraph(AgentState)
 
