@@ -6,6 +6,7 @@ import asyncio
 from server.ai.agent import create_agent
 from server.ai.memory import create_ai_memory
 from server.errors import require_error
+from server.middleware import require_middleware
 from server.router.auth import auth_router
 from server.router.chat import chat_router
 from server.router.conversations import conversation_router
@@ -41,6 +42,7 @@ app = FastAPI(
 )
 
 require_error(app)
+require_middleware(app)
 
 
 @app.get("/root")
