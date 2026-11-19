@@ -1,50 +1,64 @@
+// src/components/chat/chat-workspace.tsx
+
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
-import { useChat } from "@ai-sdk/react";
-import { Button } from "@/components/ui/button";
-import { ChatComposer } from "@/components/chat/chat-composer";
-import { createChatTransport } from "@/lib/ai/chat-transport";
-import { VelmioMetadata } from "@/types/chat/chat-type";
+import { Button } from "../ui/button";
+
+import { ChatComposer } from "./chat-composer";
+import { ChatMessage } from "./chat-message";
+import { ChatLoading } from "./chat-loading";
+
+import { useVelmioChat } from "../../hooks/use-velmio-chat";
+import { useEffect } from "react";
 
 export function ChatWorkspace() {
-  const threadIdRef = useRef<string | null>(null);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const {
+    messages,
+    sendMessage,
+    error,
+    stop,
+    isLoading,
+    loadingLabel,
+    startNewChat,
+    openConversation,
+  } = useVelmioChat();
 
-  const transport = useMemo(
-    () =>
-      createChatTransport({
-        getThreadId: () => threadIdRef.current,
-      }),
-    [],
-  );
+  useEffect(() => {
+    function handleOpenConversation(event: Event) {
+      const conversationId = (event as CustomEvent<string>).detail;
 
-  const { messages, sendMessage, status, error, stop } = useChat({
-    transport,
+      void openConversation(conversationId).catch((error) => {
+        console.error("Failed to open conversation:", error);
+      });
+    }
 
-    onFinish: ({ message }) => {
-      const metadata = message.metadata as VelmioMetadata | undefined;
+    window.addEventListener("velmio:open-conversation", handleOpenConversation);
 
-      if (metadata?.threadId) {
-        threadIdRef.current = metadata.threadId;
-        setThreadId(metadata.threadId);
-      }
-    },
+    return () => {
+      window.removeEventListener(
+        "velmio:open-conversation",
+        handleOpenConversation,
+      );
+    };
+  }, [openConversation]);
 
-    onError: (error) => {
-      console.error("Chat failed:", error);
-    },
-  });
+  useEffect(() => {
+    window.addEventListener("velmio:new-chat", startNewChat);
 
-  const isLoading = status === "submitted" || status === "streaming";
+    return () => {
+      window.removeEventListener("velmio:new-chat", startNewChat);
+    };
+  }, [startNewChat]);
 
   return (
     <div className="flex h-full flex-col">
+      {/* MESSAGE AREA */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
           {messages.length === 0 && (
             <div className="py-20 text-center">
               <h1 className="text-2xl font-semibold">Welcome to Velmio</h1>
+
               <p className="mt-2 text-muted-foreground">
                 How can I help you today?
               </p>
@@ -52,31 +66,10 @@ export function ChatWorkspace() {
           )}
 
           {messages.map((message) => (
-            <div
-              key={message.id}
-              className={
-                message.role === "user"
-                  ? "ml-auto max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-primary-foreground"
-                  : "mr-auto w-full"
-              }
-            >
-              {message.parts.map((part, index) => {
-                if (part.type !== "text") return null;
-
-                return (
-                  <p key={index} className="whitespace-pre-wrap">
-                    {part.text}
-                  </p>
-                );
-              })}
-            </div>
+            <ChatMessage key={message.id} message={message} />
           ))}
 
-          {status === "submitted" && (
-            <p className="text-sm text-muted-foreground">
-              Velmio is thinking...
-            </p>
-          )}
+          {loadingLabel && <ChatLoading label={loadingLabel} />}
 
           {error && (
             <p role="alert" className="text-sm text-destructive">
@@ -86,6 +79,7 @@ export function ChatWorkspace() {
         </div>
       </div>
 
+      {/* CHAT COMPOSER */}
       <div className="p-4">
         <div className="mx-auto max-w-3xl space-y-3">
           {isLoading && (
