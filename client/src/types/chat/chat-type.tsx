@@ -1,6 +1,8 @@
 export type ChatComposerProps = {
   onSend: (message: string) => void;
+  onStop: () => void;
   isLoading?: boolean;
+  disabled?: boolean;
 };
 
 export type Message = {

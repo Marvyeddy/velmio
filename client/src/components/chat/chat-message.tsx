@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { UIMessage } from "ai";
+import { Check, Copy } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -9,7 +13,42 @@ type ChatMessageProps = {
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";
 
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const textParts = message.parts.filter((part) => part.type === "text");
+
+  const messageText = textParts.map((part) => part.text).join("\n\n");
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(messageText);
+
+      setCopied(true);
+      setCopyError(false);
+
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy message:", error);
+      setCopied(false);
+      setCopyError(true);
+    }
+  }
 
   if (textParts.length === 0) return null;
 
@@ -17,8 +56,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
     <div
       className={
         isUser
-          ? "ml-auto max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-primary-foreground"
-          : "mr-auto w-full"
+          ? "ml-auto max-w-[85%] rounded-2xl bg-primary px-4 text-primary-foreground"
+          : "mr-auto w-full rounded-2xl bg-secondary px-4 py-2"
       }
     >
       {textParts.map((part, index) => (
@@ -98,6 +137,33 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </ReactMarkdown>
         </div>
       ))}
+
+      {!isUser && (
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            title={copied ? "Copied" : "Copy response"}
+            aria-label={copied ? "Copied" : "Copy response"}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md p-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            {copied ? (
+              <>
+                <Check className="size-4" />
+                <span>Copied</span>
+              </>
+            ) : (
+              <Copy className="size-4" />
+            )}
+          </button>
+
+          {copyError && (
+            <span role="alert" className="text-xs text-destructive">
+              Failed to copy
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

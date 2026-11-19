@@ -106,6 +106,13 @@ async def chat_stream_controller(
                 config=config,
                 version="v2",
             ):
+                if await request.is_disconnected():
+                    logger.info(
+                        "Client disconnected from conversation %s",
+                        thread_id,
+                    )
+                    raise asyncio.CancelledError()
+
                 event_type = event.get("event")
                 event_name = event.get("name", "")
                 run_id = str(event.get("run_id", ""))
