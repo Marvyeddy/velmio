@@ -1,7 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.models.user import User
-from server.schemas.users import UserCreate
 from server.utils.hashing import hash_pwd
 
 
