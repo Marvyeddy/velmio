@@ -1,25 +1,21 @@
-"use client";
+import { useChat } from "@ai-sdk/react";
 
-import { useState } from "react";
 import { ChatComposer } from "./chat-composer";
-
-type Message = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
+import { ChatTransport } from "@/lib/chat-transport";
 
 export function ChatWorkspace() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, sendMessage, status, error } = useChat({
+    transport: ChatTransport,
+  });
+
+  const isLoading = status === "submitted" || status === "streaming";
 
   function handleSend(message: string) {
-    const newMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: message,
-    };
+    if (isLoading) return;
 
-    setMessages((previous) => [...previous, newMessage]);
+    sendMessage({
+      text: message,
+    });
   }
 
   return (
@@ -36,14 +32,45 @@ export function ChatWorkspace() {
             </div>
           ) : (
             messages.map((message) => (
-              <div key={message.id} className="flex justify-end">
-                <div className="max-w-[80%] rounded-2xl bg-muted px-4 py-3">
-                  <p className="whitespace-pre-wrap text-sm">
-                    {message.content}
-                  </p>
+              <div
+                key={message.id}
+                className={
+                  message.role === "user"
+                    ? "flex justify-end"
+                    : "flex justify-start"
+                }
+              >
+                <div
+                  className={
+                    message.role === "user"
+                      ? "max-w-[80%] rounded-2xl bg-muted px-4 py-3"
+                      : "max-w-[90%] px-2 py-3"
+                  }
+                >
+                  {message.parts.map((part, index) => {
+                    if (part.type !== "text") return null;
+
+                    return (
+                      <p key={index} className="whitespace-pre-wrap text-sm">
+                        {part.text}
+                      </p>
+                    );
+                  })}
                 </div>
               </div>
             ))
+          )}
+
+          {status === "submitted" && (
+            <p className="text-sm text-muted-foreground">
+              Velmio is thinking...
+            </p>
+          )}
+
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              Something went wrong. Please try again.
+            </p>
           )}
         </div>
       </div>
