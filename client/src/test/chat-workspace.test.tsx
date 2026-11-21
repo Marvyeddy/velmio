@@ -185,4 +185,64 @@ describe("ChatWorkspace", () => {
 
     expect(receivedThreadIds).toEqual([null, "conversation-123"]);
   });
+
+  it("displays tool execution status", async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      http.post(`${apiUrl}/api/v1/chat/stream`, () => {
+        const events = [
+          {
+            type: "start",
+            messageId: "assistant-tool-test",
+          },
+          {
+            type: "data-tool-status",
+            id: "tool-123",
+            data: {
+              tool: "tavily_tool",
+              label: "Searching the web...",
+              status: "running",
+            },
+          },
+          {
+            type: "data-tool-status",
+            id: "tool-123",
+            data: {
+              tool: "tavily_tool",
+              label: "Searching the web...",
+              status: "completed",
+            },
+          },
+          {
+            type: "text-start",
+            id: "text-1",
+          },
+          {
+            type: "text-delta",
+            id: "text-1",
+            delta: "Here is what I found.",
+          },
+          {
+            type: "text-end",
+            id: "text-1",
+          },
+          {
+            type: "finish",
+          },
+        ];
+
+        const body =
+          events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") +
+          "data: [DONE]\n\n";
+
+        return new HttpResponse(body, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "x-vercel-ai-ui-message-stream": "v1",
+          },
+        });
+      }),
+    );
+  });
 });
