@@ -2,11 +2,10 @@ import { useChat } from "@ai-sdk/react";
 
 import { ChatComposer } from "./chat-composer";
 import { ChatTransport } from "@/lib/chat-transport";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { VelmioMessage } from "@/types/chat";
 
 export function ChatWorkspace() {
-  const [_, setThreadId] = useState<string | null>(null);
   const threadIdRef = useRef<string | null>(null);
   const { messages, sendMessage, status, error, stop } = useChat<VelmioMessage>(
     {
@@ -23,13 +22,13 @@ export function ChatWorkspace() {
   function handleSend(message: string) {
     if (isLoading) return;
 
+    console.log("Sending thread ID:", threadIdRef.current);
+
     sendMessage(
-      {
-        text: message,
-      },
+      { text: message },
       {
         body: {
-          threadId: threadIdRef.current,
+          thread_id: threadIdRef.current,
         },
       },
     );
@@ -37,11 +36,10 @@ export function ChatWorkspace() {
 
   useEffect(() => {
     for (const message of messages) {
-      const id = message.metadata?.threadid;
+      const id = message.metadata?.threadId;
 
-      if (id && id !== threadIdRef.current) {
+      if (id) {
         threadIdRef.current = id;
-        setThreadId(id);
       }
     }
   }, [messages]);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { ChatWorkspace } from "@/components/chat/chat-workspace";
 import userEvent from "@testing-library/user-event";
 import { server } from "./mocks/server";
@@ -108,5 +108,81 @@ describe("ChatWorkspace", () => {
     await user.type(input, "Hello velmio{Enter}");
 
     expect(await screen.findByText("Hello from Gemini!")).toBeInTheDocument();
+  });
+
+  it("reuses conversation ID for subsequent messages", async () => {
+    const user = userEvent.setup();
+
+    const receivedThreadIds: Array<string | null> = [];
+
+    server.use(
+      http.post(`${apiUrl}/api/v1/chat/stream`, async ({ request }) => {
+        const body = (await request.json()) as {
+          message: string;
+          thread_id: string | null;
+        };
+
+        receivedThreadIds.push(body.thread_id);
+
+        const events = [
+          {
+            type: "start",
+            messageId: crypto.randomUUID(),
+            messageMetadata: {
+              threadId: "conversation-123",
+            },
+          },
+          {
+            type: "text-start",
+            id: "text-1",
+          },
+          {
+            type: "text-delta",
+            id: "text-1",
+            delta: `Response to ${body.message}`,
+          },
+          {
+            type: "text-end",
+            id: "text-1",
+          },
+          {
+            type: "finish",
+          },
+        ];
+
+        const stream =
+          events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") +
+          "data: [DONE]\n\n";
+
+        return new HttpResponse(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "x-vercel-ai-ui-message-stream": "v1",
+          },
+        });
+      }),
+    );
+
+    render(<ChatWorkspace />);
+
+    const input = screen.getByRole("textbox", {
+      name: /message velmio/i,
+    });
+
+    await user.type(input, "Hello{Enter}");
+
+    expect(await screen.findByText("Response to Hello")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /send message/i }));
+    });
+
+    await user.type(input, "Explain FastAPI{Enter}");
+
+    expect(
+      await screen.findByText("Response to Explain FastAPI"),
+    ).toBeInTheDocument();
+
+    expect(receivedThreadIds).toEqual([null, "conversation-123"]);
   });
 });
