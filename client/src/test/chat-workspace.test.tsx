@@ -244,5 +244,21 @@ describe("ChatWorkspace", () => {
         });
       }),
     );
+
+    render(<ChatWorkspace />);
+
+    const input = screen.getByRole("textbox", {
+      name: /message velmio/i,
+    });
+
+    await user.type(input, "Search for React 19 updates{Enter}");
+
+    expect(await screen.findByText("Searching the web...")).toBeInTheDocument();
+
+    expect(await screen.findByText("Completed")).toBeInTheDocument();
+
+    expect(
+      await screen.findByText("Here is what I found."),
+    ).toBeInTheDocument();
   });
 });
