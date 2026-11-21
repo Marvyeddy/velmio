@@ -1,15 +1,17 @@
 import { useState } from "react";
 import type { SubmitEvent, KeyboardEvent } from "react";
-import { ArrowUp, Paperclip } from "lucide-react";
+import { ArrowUp, Paperclip, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 type ChatComposerProps = {
   onSend: (message: string) => void;
+  onStop: () => void;
+  isLoading: boolean;
 };
 
-export function ChatComposer({ onSend }: ChatComposerProps) {
+export function ChatComposer({ onSend, onStop, isLoading }: ChatComposerProps) {
   const [message, setMessage] = useState("");
 
   const canSend = message.trim().length > 0;
@@ -17,7 +19,7 @@ export function ChatComposer({ onSend }: ChatComposerProps) {
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!canSend) return;
+    if (!canSend || isLoading) return;
 
     onSend(message.trim());
     setMessage("");
@@ -57,15 +59,27 @@ export function ChatComposer({ onSend }: ChatComposerProps) {
         className="max-h-48 min-h-10 flex-1 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
       />
 
-      <Button
-        type="submit"
-        size="icon"
-        disabled={!canSend}
-        aria-label="Send message"
-        className="shrink-0 rounded-full"
-      >
-        <ArrowUp className="size-5" />
-      </Button>
+      {isLoading ? (
+        <Button
+          type="button"
+          size="icon"
+          onClick={onStop}
+          aria-label="Stop generating"
+          className="shrink-0 rounded-full"
+        >
+          <Square className="size-4 fill-current" />
+        </Button>
+      ) : (
+        <Button
+          type="submit"
+          size="icon"
+          disabled={!canSend}
+          aria-label="Send message"
+          className="shrink-0 rounded-full"
+        >
+          <ArrowUp className="size-5" />
+        </Button>
+      )}
     </form>
   );
 }

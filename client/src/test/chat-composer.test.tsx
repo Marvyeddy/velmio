@@ -5,7 +5,9 @@ import { userEvent } from "@testing-library/user-event";
 
 describe("ChatComposer", () => {
   it("renders the message input", () => {
-    render(<ChatComposer onSend={vi.fn()} />);
+    render(
+      <ChatComposer onSend={vi.fn()} onStop={vi.fn()} isLoading={false} />,
+    );
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
@@ -15,7 +17,9 @@ describe("ChatComposer", () => {
   });
 
   it("disables the send button when the input is empty", () => {
-    render(<ChatComposer onSend={vi.fn()} />);
+    render(
+      <ChatComposer onSend={vi.fn()} onStop={vi.fn()} isLoading={false} />,
+    );
 
     const sendButton = screen.getByRole("button", {
       name: /send message/i,
@@ -27,7 +31,7 @@ describe("ChatComposer", () => {
   it("sends the typed message and clears the input", async () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
-    render(<ChatComposer onSend={onSend} />);
+    render(<ChatComposer onSend={onSend} onStop={vi.fn()} isLoading={false} />);
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
@@ -49,7 +53,7 @@ describe("ChatComposer", () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
 
-    render(<ChatComposer onSend={onSend} />);
+    render(<ChatComposer onSend={onSend} onStop={vi.fn()} isLoading={false} />);
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
@@ -65,7 +69,7 @@ describe("ChatComposer", () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
 
-    render(<ChatComposer onSend={onSend} />);
+    render(<ChatComposer onSend={onSend} onStop={vi.fn()} isLoading={false} />);
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
@@ -75,5 +79,21 @@ describe("ChatComposer", () => {
     expect(input).toHaveValue("Hello Velmio\nHelp");
 
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("calls onStop when the stop button is clicked", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    const onStop = vi.fn();
+
+    render(<ChatComposer onStop={onStop} onSend={onSend} isLoading={true} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /stop generating/i,
+      }),
+    );
+
+    expect(onStop).toHaveBeenCalledOnce();
   });
 });

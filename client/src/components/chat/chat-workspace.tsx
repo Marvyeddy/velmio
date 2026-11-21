@@ -2,10 +2,16 @@ import { useChat } from "@ai-sdk/react";
 
 import { ChatComposer } from "./chat-composer";
 import { ChatTransport } from "@/lib/chat-transport";
+import { useState } from "react";
 
 export function ChatWorkspace() {
-  const { messages, sendMessage, status, error } = useChat({
+  const [threadId] = useState<string | null>(null);
+  const { messages, sendMessage, status, error, stop } = useChat({
     transport: ChatTransport,
+
+    onData(datapart) {
+      console.log("Data part:", datapart);
+    },
   });
 
   const isLoading = status === "submitted" || status === "streaming";
@@ -13,9 +19,16 @@ export function ChatWorkspace() {
   function handleSend(message: string) {
     if (isLoading) return;
 
-    sendMessage({
-      text: message,
-    });
+    sendMessage(
+      {
+        text: message,
+      },
+      {
+        body: {
+          threadId: threadId,
+        },
+      },
+    );
   }
 
   return (
@@ -77,7 +90,11 @@ export function ChatWorkspace() {
 
       <div className="shrink-0 px-4 pb-4">
         <div className="mx-auto max-w-3xl">
-          <ChatComposer onSend={handleSend} />
+          <ChatComposer
+            onSend={handleSend}
+            onStop={stop}
+            isLoading={isLoading}
+          />
         </div>
       </div>
     </section>
