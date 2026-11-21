@@ -2,17 +2,21 @@ import { useChat } from "@ai-sdk/react";
 
 import { ChatComposer } from "./chat-composer";
 import { ChatTransport } from "@/lib/chat-transport";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { VelmioMessage } from "@/types/chat";
 
 export function ChatWorkspace() {
-  const [threadId] = useState<string | null>(null);
-  const { messages, sendMessage, status, error, stop } = useChat({
-    transport: ChatTransport,
+  const [_, setThreadId] = useState<string | null>(null);
+  const threadIdRef = useRef<string | null>(null);
+  const { messages, sendMessage, status, error, stop } = useChat<VelmioMessage>(
+    {
+      transport: ChatTransport,
 
-    onData(datapart) {
-      console.log("Data part:", datapart);
+      onData(datapart) {
+        console.log("Data part:", datapart);
+      },
     },
-  });
+  );
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -25,11 +29,22 @@ export function ChatWorkspace() {
       },
       {
         body: {
-          threadId: threadId,
+          threadId: threadIdRef.current,
         },
       },
     );
   }
+
+  useEffect(() => {
+    for (const message of messages) {
+      const id = message.metadata?.threadid;
+
+      if (id && id !== threadIdRef.current) {
+        threadIdRef.current = id;
+        setThreadId(id);
+      }
+    }
+  }, [messages]);
 
   return (
     <section className="flex h-full min-h-0 flex-col">
