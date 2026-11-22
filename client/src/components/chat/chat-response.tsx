@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 type CopyResponseProps = {
@@ -7,15 +7,37 @@ type CopyResponseProps = {
 
 export function CopyResponse({ text }: CopyResponseProps) {
   const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(text);
+
       setCopied(true);
+
+      // Clear the previous timer if the user clicks again.
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Return to the copy icon after 2 seconds.
+      timeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        timeoutRef.current = null;
+      }, 2000);
     } catch {
       setCopied(false);
     }
   }
+
+  // Clean up the timer when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <button
