@@ -1,33 +1,44 @@
-import { useState, type SubmitEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useSignin } from "@/hooks/use-signin";
 import { useAuth } from "@/hooks/use-auth";
+import { signinSchema, type SigninFormValues } from "@/schemas/auth.schema";
 
 export function SigninPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isError: authError } = useAuth();
   const signin = useSignin();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SigninFormValues>({
+    resolver: zodResolver(signinSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
   const from = location.state?.from;
+
   const redirectTo =
     typeof from === "string" && from.startsWith("/") && !from.startsWith("//")
       ? from
       : "/chat";
 
-  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  async function onSubmit(data: SigninFormValues) {
     try {
-      await signin.mutateAsync({ email, password });
+      await signin.mutateAsync(data);
+
       navigate(redirectTo, { replace: true });
     } catch {
-      // The mutation exposes the error through signin.error.
+      // The mutation exposes errors through signin.error.
     }
   }
 
@@ -35,6 +46,14 @@ export function SigninPage() {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p role="status">Checking your session...</p>
+      </main>
+    );
+  }
+
+  if (authError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p role="alert">Unable to verify your session. Please try again.</p>
       </main>
     );
   }
@@ -54,7 +73,11 @@ export function SigninPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
               Email address
@@ -64,12 +87,22 @@ export function SigninPage() {
               id="email"
               type="email"
               autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="you@example.com"
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? "email-error" : undefined}
+              {...register("email")}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />
+
+            {errors.email && (
+              <p
+                id="email-error"
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -90,12 +123,22 @@ export function SigninPage() {
               id="password"
               type="password"
               autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="Enter your password"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? "password-error" : undefined}
+              {...register("password")}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />
+
+            {errors.password && (
+              <p
+                id="password-error"
+                role="alert"
+                className="text-sm text-destructive"
+              >
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           {signin.isError && (
@@ -106,10 +149,10 @@ export function SigninPage() {
 
           <button
             type="submit"
-            disabled={signin.isPending}
+            disabled={isSubmitting || signin.isPending}
             className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {signin.isPending ? "Signing in..." : "Sign in"}
+            {isSubmitting || signin.isPending ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
