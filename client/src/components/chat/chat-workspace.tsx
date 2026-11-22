@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef } from "react";
-import { CheckCircleIcon, CircleX } from "lucide-react";
+import { ArrowDown, CheckCircleIcon, CircleX } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -8,6 +8,7 @@ import { ChatTransport } from "@/lib/chat-transport";
 import type { VelmioMessage } from "@/types/chat";
 import { CopyResponse } from "./chat-response";
 import { ChatComposer } from "./chat-composer";
+import { useChatScroll } from "@/hooks/use-chat-scroll";
 
 export function ChatWorkspace() {
   const threadIdRef = useRef<string | null>(null);
@@ -17,6 +18,8 @@ export function ChatWorkspace() {
       transport: ChatTransport,
     },
   );
+  const { containerRef, handleScroll, scrollToBottom, showScrollButton } =
+    useChatScroll(messages);
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -44,8 +47,12 @@ export function ChatWorkspace() {
   }, [messages]);
 
   return (
-    <section className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
+    <section className="relative flex h-full min-h-0 flex-col">
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-6"
+      >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {messages.length === 0 ? (
             <div className="py-20 text-center">
@@ -176,6 +183,18 @@ export function ChatWorkspace() {
           )}
         </div>
       </div>
+
+      {showScrollButton && (
+        <button
+          type="button"
+          onClick={scrollToBottom}
+          aria-label="Scroll to bottom"
+          title="Scroll to bottom"
+          className="absolute bottom-28 left-1/2 z-10 -translate-x-1/2 rounded-full border bg-background p-2 shadow-md transition-colors hover:bg-muted"
+        >
+          <ArrowDown className="size-4" />
+        </button>
+      )}
 
       <div className="shrink-0 px-4 pb-4">
         <div className="mx-auto max-w-3xl">
