@@ -1,92 +1,158 @@
 import { useEffect, useRef } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
-import { CheckCircle2, CircleX, LoaderCircle } from "lucide-react";
 
-import { useVerifyEmail } from "@/hooks/use-verify-email";
-
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+  ArrowRight,
+  CheckCircle2,
+  CircleX,
+  LoaderCircle,
+  ShieldCheck,
+} from "lucide-react";
+
+import { AuthLayout } from "@/layouts/auth-layout";
+import { useVerifyEmail } from "@/hooks/use-verify-email";
 import { useAuth } from "@/hooks/use-auth";
 
+import { Button } from "@/components/ui/button";
+
 export function VerifyEmailPage() {
-  const { user } = useAuth();
+  const { user, refetch } = useAuth();
+
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
   const verify = useVerifyEmail();
   const submittedToken = useRef<string | null>(null);
 
+  const { mutate, isSuccess } = verify;
+
   useEffect(() => {
-    if (!token || submittedToken.current === token) return;
+    if (!token || submittedToken.current === token) {
+      return;
+    }
 
     submittedToken.current = token;
-    verify.mutate(token);
-  }, [token, verify.mutate]);
+    mutate(token);
+  }, [token, mutate]);
+
+  useEffect(() => {
+    if (isSuccess) {
+      void refetch();
+    }
+  }, [isSuccess, refetch]);
 
   const isMissingToken = !token;
+
   const isVerifying = !!token && (verify.isIdle || verify.isPending);
 
   if (user?.verified) {
-    return <Navigate to={"/chat"} replace />;
+    return <Navigate to="/chat" replace />;
   }
 
-  return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="items-center text-center">
-          {isMissingToken || verify.isError ? (
-            <CircleX className="size-12 text-destructive mx-auto" />
-          ) : verify.isSuccess ? (
-            <CheckCircle2 className="size-12 text-green-600 mx-auto" />
-          ) : (
-            <LoaderCircle className="size-12 animate-spin mx-auto" />
-          )}
+  // ---------------------------------------
+  // MISSING OR INVALID TOKEN
+  // ---------------------------------------
 
-          <CardTitle className="text-2xl">
+  if (isMissingToken || verify.isError) {
+    return (
+      <AuthLayout
+        title="Verification failed."
+        description="We couldn't verify your email address."
+      >
+        <div className="space-y-7">
+          <div className="flex size-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10">
+            <CircleX className="size-8 text-red-500" />
+          </div>
+
+          <p className="text-sm leading-7 text-zinc-500 dark:text-zinc-400">
             {isMissingToken
-              ? "Invalid verification link"
-              : isVerifying
-                ? "Verifying your email..."
-                : verify.isSuccess
-                  ? "Email verified!"
-                  : "Verification failed"}
-          </CardTitle>
+              ? "This verification link is incomplete. Please request a new verification email."
+              : "This verification link may be invalid, expired, or already used. Request a new link to continue."}
+          </p>
 
-          <CardDescription className="text-center">
-            {isMissingToken
-              ? "The verification token is missing."
-              : isVerifying
-                ? "Please wait while we verify your account."
-                : verify.isSuccess
-                  ? "Your Velmio account has been verified successfully."
-                  : "This verification link may be invalid or expired."}
-          </CardDescription>
-        </CardHeader>
+          <Button
+            render={<Link to="/verify-email-required" />}
+            className="group h-12 w-full rounded-xl bg-violet-600 font-semibold text-white hover:bg-violet-500"
+          >
+            Back to verification
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
+      </AuthLayout>
+    );
+  }
 
-        <CardContent>
-          {verify.isSuccess && (
-            <Button render={<Link to="/chat" />} className="w-full">
-              Continue to Velmio
-            </Button>
-          )}
+  // ---------------------------------------
+  // SUCCESS
+  // ---------------------------------------
 
-          {(isMissingToken || verify.isError) && (
-            <Button
-              variant="outline"
-              render={<Link to="/verify-email-required" />}
-              className="w-full"
-            >
-              Back to verification
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    </main>
-  );
+  if (verify.isSuccess) {
+    return (
+      <AuthLayout
+        title="Email verified!"
+        description="Your Velmio account is now verified."
+      >
+        <div className="space-y-7">
+          <div className="flex size-16 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10">
+            <CheckCircle2 className="size-8 text-emerald-500" />
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">
+              You're all set!
+            </h2>
+
+            <p className="text-sm leading-7 text-zinc-500 dark:text-zinc-400">
+              Your email address has been verified successfully. You can now
+              start exploring Velmio and everything your AI workspace has to
+              offer.
+            </p>
+          </div>
+
+          <Button
+            render={<Link to="/chat" />}
+            className="group h-12 w-full rounded-xl bg-violet-600 font-semibold text-white hover:bg-violet-500"
+          >
+            Continue to Velmio
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  // ---------------------------------------
+  // VERIFYING
+  // ---------------------------------------
+
+  if (isVerifying) {
+    return (
+      <AuthLayout
+        title="Verifying your email..."
+        description="Just a moment while we secure your account."
+      >
+        <div role="status" aria-live="polite" className="space-y-7">
+          <div className="relative flex size-20 items-center justify-center">
+            <div className="absolute inset-0 rounded-2xl bg-violet-500/10" />
+
+            <LoaderCircle className="relative size-10 animate-spin text-violet-500" />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-zinc-950 dark:text-white">
+              <ShieldCheck className="size-4 text-violet-500" />
+              Securing your account
+            </div>
+
+            <p className="text-sm leading-7 text-zinc-500 dark:text-zinc-400">
+              We're confirming your verification link. Please keep this page
+              open.
+            </p>
+          </div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  return null;
 }

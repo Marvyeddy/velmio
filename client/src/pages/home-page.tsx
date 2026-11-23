@@ -6,12 +6,8 @@ import {
   BrainCircuit,
   Check,
   ChevronRight,
-  Command,
   FileText,
-  Globe2,
   Layers3,
-  LockKeyhole,
-  Menu,
   MessageSquareText,
   MoveUpRight,
   Sparkles,
@@ -213,9 +209,9 @@ function ChatPreview() {
 function Hero() {
   return (
     <section className="relative overflow-hidden pb-28 pt-16 sm:pt-24">
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[650px] w-[950px] -translate-x-1/2 rounded-full bg-violet-700/15 blur-[130px]" />
+      <div className="pointer-events-none absolute left-1/2 top-0 h-162.5 w-237.5 -translate-x-1/2 rounded-full bg-violet-700/15 blur-[130px]" />
 
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.07)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.07)_1px,transparent_1px)] bg-size-[32px_32px] mask-[linear-gradient(to_bottom,black,transparent_70%)]" />
 
       <div className="relative mx-auto max-w-7xl px-6 text-center lg:px-10">
         <motion.div
@@ -232,7 +228,7 @@ function Hero() {
           <h1 className="mx-auto max-w-5xl text-[clamp(3.5rem,8vw,7.5rem)] font-semibold leading-[1.04] tracking-[-0.075em] text-white">
             Your mind,
             <br />
-            <span className="bg-gradient-to-r from-[#c5b0ff] via-[#a78bfa] to-[#f0c8ff] bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-[#c5b0ff] via-[#a78bfa] to-[#f0c8ff] bg-clip-text text-transparent">
               without limits.
             </span>
           </h1>
@@ -285,10 +281,7 @@ function Hero() {
 
 function Features() {
   return (
-    <section
-      id="features"
-      className="relative border-t border-white/[.06] py-28"
-    >
+    <section id="features" className="relative border-t border-white/6 py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <div className="mb-16 max-w-2xl">
           <p className="mb-5 text-xs font-semibold uppercase tracking-[.3em] text-violet-400">
@@ -313,7 +306,7 @@ function Features() {
               key={feature.number}
               whileHover={{ y: -5 }}
               transition={{ duration: 0.25 }}
-              className={`group relative min-h-[300px] overflow-hidden rounded-[26px] border border-white/10 bg-[#141419] p-8 sm:p-10 ${feature.className}`}
+              className={`group relative min-h-75 overflow-hidden rounded-[26px] border border-white/10 bg-[#141419] p-8 sm:p-10 ${feature.className}`}
             >
               <div className="absolute -right-16 -top-16 size-52 rounded-full bg-violet-500/5 blur-3xl transition group-hover:bg-violet-500/15" />
 

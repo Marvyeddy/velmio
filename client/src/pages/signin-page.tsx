@@ -24,7 +24,7 @@ export function SigninPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { user, isLoading: authLoading, isError: authError } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   const signin = useSignin();
 

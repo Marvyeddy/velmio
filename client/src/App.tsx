@@ -10,6 +10,9 @@ import { ProtectedRoute } from "./components/auth/protected-route";
 import { SignupPage } from "./pages/signup-page";
 import { VerifyEmailRequiredPage } from "./pages/verify-email-required-page";
 import { VerifyEmailPage } from "./pages/verify-email-page";
+import { ResetPasswordGuard } from "./guard/reset-password-guard";
+import { VerifyEmailGuard } from "./guard/verify-email-guard";
+import { VerificationRequiredGuard } from "./guard/verify-email-required-guard";
 
 const App = () => {
   return (
@@ -19,13 +22,20 @@ const App = () => {
 
         <Route path="/signin" element={<SigninPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route element={<ResetPasswordGuard />}>
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Route>
 
-        <Route
-          path="/verify-email-required"
-          element={<VerifyEmailRequiredPage />}
-        />
+        <Route element={<VerifyEmailGuard />}>
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+        </Route>
+
+        <Route element={<VerificationRequiredGuard />}>
+          <Route
+            path="/verify-email-required"
+            element={<VerifyEmailRequiredPage />}
+          />
+        </Route>
 
         <Route element={<ProtectedRoute />}>
           <Route path="/chat" element={<ChatPage />} />

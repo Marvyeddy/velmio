@@ -21,11 +21,11 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
       {/* LEFT: BRAND PANEL */}
       <aside className="relative hidden min-h-screen overflow-hidden bg-[#100c1c] lg:flex lg:flex-col lg:justify-between">
         {/* Background effects */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.055)_1px,transparent_1px)] bg-[size:30px_30px]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.055)_1px,transparent_1px)] bg-size-[30px_30px]" />
 
-        <div className="pointer-events-none absolute -left-40 top-1/4 size-[500px] rounded-full bg-violet-700/30 blur-[110px]" />
+        <div className="pointer-events-none absolute -left-40 top-1/4 size-125 rounded-full bg-violet-700/30 blur-[110px]" />
 
-        <div className="pointer-events-none absolute -right-40 bottom-0 size-[550px] rounded-full bg-fuchsia-700/20 blur-[120px]" />
+        <div className="pointer-events-none absolute -right-40 bottom-0 size-137.5 rounded-full bg-fuchsia-700/20 blur-[120px]" />
 
         {/* Logo */}
         <div className="relative z-10 p-10 xl:p-14">
@@ -88,7 +88,7 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
             <h2 className="max-w-xl text-5xl font-semibold leading-[1.1] tracking-[-0.07em] text-white xl:text-6xl">
               Your mind,
               <br />
-              <span className="bg-gradient-to-r from-violet-300 via-fuchsia-200 to-violet-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-violet-300 via-fuchsia-200 to-violet-400 bg-clip-text text-transparent">
                 without limits.
               </span>
             </h2>
@@ -138,7 +138,7 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="w-full max-w-[420px]"
+            className="w-full max-w-105"
           >
             <div className="mb-9">
               <div className="mb-6 flex size-12 items-center justify-center rounded-2xl border border-violet-500/15 bg-violet-500/10">
