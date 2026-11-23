@@ -1,5 +1,7 @@
+import uuid
+from datetime import datetime
 from typing import Annotated
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 class UserCreate(BaseModel):
@@ -21,3 +23,15 @@ class EmailRequest(BaseModel):
 
 class PasswordRequest(BaseModel):
     password: Annotated[str, Field(description="The new proposed password")]
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    username: str
+    is_active: bool
+    verified: bool
+    created_at: datetime
+    updated_at: datetime

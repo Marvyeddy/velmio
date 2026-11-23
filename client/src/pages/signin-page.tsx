@@ -59,15 +59,7 @@ export function SigninPage() {
     }
   }
 
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-[#09090e]">
-        <LoaderCircle className="size-8 animate-spin text-violet-500" />
-      </div>
-    );
-  }
-
-  if (user) {
+  if (!authLoading && user) {
     return <Navigate to={redirectTo} replace />;
   }
 

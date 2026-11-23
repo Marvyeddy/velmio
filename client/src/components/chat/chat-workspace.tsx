@@ -1,5 +1,7 @@
 import { useChat } from "@ai-sdk/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   ArrowDown,
@@ -16,18 +18,52 @@ import remarkGfm from "remark-gfm";
 import { ChatTransport } from "@/lib/chat-transport";
 import type { VelmioMessage } from "@/types/chat";
 
+import { conversationKeys, useConversation } from "@/hooks/use-conversations";
+
 import { CopyResponse } from "./chat-response";
 import { ChatComposer } from "./chat-composer";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 
-export function ChatWorkspace() {
-  const threadIdRef = useRef<string | null>(null);
+type ChatWorkspaceProps = {
+  conversationId: string | null;
+  sessionKey: string;
+  shouldLoadHistory: boolean;
+};
 
-  const { messages, sendMessage, status, error, stop } = useChat<VelmioMessage>(
-    {
+export function ChatWorkspace({
+  conversationId,
+  sessionKey,
+  shouldLoadHistory,
+}: ChatWorkspaceProps) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Backend conversation ID.
+  // This is separate from the frontend chat session key.
+  const threadIdRef = useRef<string | null>(conversationId);
+
+  // Prevent navigating more than once for a newly created chat.
+  const hasNavigatedRef = useRef(false);
+
+  // Track which saved conversation has been restored.
+  const [restoredConversationId, setRestoredConversationId] = useState<
+    string | null
+  >(null);
+
+  // Fetch history only when opening an existing conversation.
+  // A newly created conversation already has messages in useChat.
+  const {
+    data: savedConversation,
+    isLoading: isLoadingConversation,
+    isError: isConversationError,
+    refetch: refetchConversation,
+  } = useConversation(shouldLoadHistory ? conversationId : null);
+
+  const { messages, sendMessage, status, error, stop, setMessages } =
+    useChat<VelmioMessage>({
+      id: sessionKey,
       transport: ChatTransport,
-    },
-  );
+    });
 
   const { containerRef, handleScroll, scrollToBottom, showScrollButton } =
     useChatScroll(messages);
@@ -36,16 +72,120 @@ export function ChatWorkspace() {
 
   const lastMessage = messages.at(-1);
 
-  // Show a separate thinking indicator only before
-  // the assistant message has been created.
   const showThinking =
     status === "submitted" && lastMessage?.role !== "assistant";
 
+  const isHistoryReady =
+    !shouldLoadHistory ||
+    (Boolean(savedConversation) && restoredConversationId === conversationId);
+
+  const isComposerDisabled =
+    !isHistoryReady ||
+    (shouldLoadHistory && isLoadingConversation) ||
+    (shouldLoadHistory && isConversationError);
+
+  // ----------------------------------
+  // Restore saved conversation history
+  // ----------------------------------
+
+  useEffect(() => {
+    if (!shouldLoadHistory) return;
+    if (!conversationId || !savedConversation) return;
+    if (savedConversation.id !== conversationId) return;
+    if (restoredConversationId === conversationId) return;
+
+    const restoredMessages: VelmioMessage[] = savedConversation.messages.map(
+      (message, index) => ({
+        id: `${conversationId}-${index}`,
+        role: message.role,
+        parts: [
+          {
+            type: "text" as const,
+            text: message.content,
+          },
+        ],
+      }),
+    );
+
+    threadIdRef.current = conversationId;
+
+    setMessages(restoredMessages);
+    setRestoredConversationId(conversationId);
+  }, [
+    shouldLoadHistory,
+    conversationId,
+    savedConversation,
+    restoredConversationId,
+    setMessages,
+  ]);
+
+  // ----------------------------------
+  // Track thread ID from streamed metadata
+  // ----------------------------------
+
+  useEffect(() => {
+    // Do not allow historical messages to override
+    // the ID of the currently opened conversation.
+    if (shouldLoadHistory) return;
+
+    for (const message of messages) {
+      const id = message.metadata?.threadId;
+
+      if (id) {
+        threadIdRef.current = id;
+      }
+    }
+  }, [messages, shouldLoadHistory]);
+
+  // ----------------------------------
+  // Update URL after creating a conversation
+  // ----------------------------------
+
+  useEffect(() => {
+    // Only new chats need a URL assigned.
+    if (conversationId) return;
+
+    // Never navigate during streaming.
+    if (isLoading) return;
+
+    // Prevent duplicate navigation.
+    if (hasNavigatedRef.current) return;
+
+    const newThreadId = messages.find((message) => message.metadata?.threadId)
+      ?.metadata?.threadId;
+
+    if (!newThreadId) return;
+
+    hasNavigatedRef.current = true;
+    threadIdRef.current = newThreadId;
+
+    // Refresh sidebar independently of workspace messages.
+    void queryClient.invalidateQueries({
+      queryKey: conversationKeys.all,
+    });
+
+    // Preserve the frontend session when the URL changes.
+    navigate(`/chat/${newThreadId}`, {
+      replace: true,
+      state: {
+        preserveSessionKey: sessionKey,
+      },
+    });
+  }, [conversationId, isLoading, messages, navigate, queryClient, sessionKey]);
+
+  // ----------------------------------
+  // Send message
+  // ----------------------------------
+
   function handleSend(message: string) {
-    if (isLoading || !message.trim()) return;
+    const text = message.trim();
+
+    if (!text || isLoading || isComposerDisabled) {
+      return;
+    }
 
     sendMessage(
-      { text: message },
+      { text },
       {
         body: {
           thread_id: threadIdRef.current,
@@ -54,15 +194,9 @@ export function ChatWorkspace() {
     );
   }
 
-  useEffect(() => {
-    for (const message of messages) {
-      const id = message.metadata?.threadId;
-
-      if (id) {
-        threadIdRef.current = id;
-      }
-    }
-  }, [messages]);
+  // ----------------------------------
+  // Render
+  // ----------------------------------
 
   return (
     <section className="relative flex h-full min-h-0 flex-col bg-white text-zinc-900 transition-colors duration-300 dark:bg-[#0e0e13] dark:text-zinc-100">
@@ -94,7 +228,31 @@ export function ChatWorkspace() {
         className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6"
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-7">
-          {messages.length === 0 ? (
+          {/* Loading existing conversation */}
+          {shouldLoadHistory && !isHistoryReady && !isConversationError ? (
+            <div
+              role="status"
+              className="flex items-center justify-center gap-2 py-20 text-sm text-zinc-500 dark:text-zinc-400"
+            >
+              <LoaderCircle className="size-4 animate-spin text-violet-500" />
+              Loading conversation...
+            </div>
+          ) : shouldLoadHistory && isConversationError ? (
+            <div className="flex flex-col items-center gap-4 py-20">
+              <p role="alert" className="text-sm text-red-500">
+                Unable to load this conversation.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => void refetchConversation()}
+                className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+              >
+                Try again
+              </button>
+            </div>
+          ) : messages.length === 0 ? (
+            /* Empty conversation */
             <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
               <div className="relative mb-8">
                 <div className="absolute -inset-5 rounded-full bg-violet-500/10 blur-2xl" />
@@ -134,14 +292,13 @@ export function ChatWorkspace() {
                 (part) => part.type === "data-tool-status",
               );
 
-              // Only display the inline thinking indicator
-              // when the assistant has no visible content.
               const showInlineThinking =
                 isLoading && isLastAssistant && !hasText && !hasToolStatus;
 
-              const showCopyButton = isLastAssistant
-                ? hasText && !isLoading
-                : message.role === "assistant" && hasText;
+              const showCopyButton =
+                message.role === "assistant" &&
+                hasText &&
+                !(isLastAssistant && isLoading);
 
               return (
                 <div
@@ -150,7 +307,7 @@ export function ChatWorkspace() {
                     isUser ? "flex justify-end" : "flex items-start gap-3"
                   }
                 >
-                  {/* One assistant avatar per message */}
+                  {/* Assistant avatar */}
                   {!isUser && (
                     <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm shadow-violet-500/20">
                       <Orbit className="size-4" />
@@ -165,9 +322,7 @@ export function ChatWorkspace() {
                     }
                   >
                     {message.parts.map((part, index) => {
-                      // -----------------------------
                       // Tool execution status
-                      // -----------------------------
                       if (part.type === "data-tool-status") {
                         const hasNewerStatus = message.parts
                           .slice(index + 1)
@@ -208,9 +363,7 @@ export function ChatWorkspace() {
                         );
                       }
 
-                      // -----------------------------
                       // Message text
-                      // -----------------------------
                       if (part.type === "text") {
                         if (isUser) {
                           return (
@@ -238,7 +391,7 @@ export function ChatWorkspace() {
                       return null;
                     })}
 
-                    {/* Thinking inside the existing assistant message */}
+                    {/* Inline thinking */}
                     {showInlineThinking && (
                       <div
                         role="status"
@@ -261,8 +414,8 @@ export function ChatWorkspace() {
             })
           )}
 
-          {/* Thinking before an assistant message exists */}
-          {showThinking && (
+          {/* Thinking before assistant message exists */}
+          {isHistoryReady && !isConversationError && showThinking && (
             <div role="status" className="flex items-center gap-3">
               <div className="flex size-8 items-center justify-center rounded-xl bg-violet-600 text-white">
                 <Orbit className="size-4" />
@@ -307,6 +460,7 @@ export function ChatWorkspace() {
             onSend={handleSend}
             onStop={stop}
             isLoading={isLoading}
+            disabled={isComposerDisabled}
           />
 
           <p className="mt-3 text-center text-[11px] text-zinc-400 dark:text-zinc-600">

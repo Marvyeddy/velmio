@@ -1,9 +1,14 @@
+
 export type AuthUser = {
-    id: string;
-    email: string;
-    username: string;
-    verified: boolean
-}
+  id: string;
+  email: string;
+  username: string;
+  is_active: boolean;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 
 export type SigninCredentials = {
     email: string;
