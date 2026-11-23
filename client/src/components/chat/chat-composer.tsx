@@ -16,14 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useUploadDocument } from "@/hooks/use-upload-documents";
 import { useDocumentStatus } from "@/hooks/use-document-status";
+import { DocumentSelector } from "../documents/document-selector";
 
 type ChatComposerProps = {
-  onSend: (message: string) => void;
+  onSend: (message: string, documentId: string | null) => void;
   onStop: () => void;
   isLoading: boolean;
   disabled?: boolean;
 };
-
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".csv"];
 
 export function ChatComposer({
@@ -43,10 +43,18 @@ export function ChatComposer({
   const upload = useUploadDocument();
   const documentStatus = useDocumentStatus(documentId);
 
-  const canSend = message.trim().length > 0;
-  const canSubmit = canSend && !isLoading && !disabled;
-
   const processingStatus = documentStatus.data?.status;
+
+  const isDocumentReady =
+    !filename ||
+    (documentId !== null &&
+      processingStatus === "completed" &&
+      !upload.isPending &&
+      !documentStatus.isError);
+
+  const canSend = message.trim().length > 0;
+
+  const canSubmit = canSend && !isLoading && !disabled && isDocumentReady;
 
   function resizeTextarea() {
     const textarea = textareaRef.current;
@@ -67,7 +75,8 @@ export function ChatComposer({
 
     if (!canSubmit) return;
 
-    onSend(message.trim());
+    onSend(message.trim(), documentId);
+
     setMessage("");
 
     if (textareaRef.current) {
@@ -118,6 +127,13 @@ export function ChatComposer({
     setFilename(null);
     setFileError(null);
     upload.reset();
+  }
+
+  function handleDocumentSelect(documentId: string, filename: string) {
+    upload.reset();
+    setFileError(null);
+    setDocumentId(documentId);
+    setFilename(filename);
   }
 
   return (
@@ -227,9 +243,12 @@ export function ChatComposer({
             )}
           </Button>
 
-          <span className="hidden text-[11px] text-zinc-400 dark:text-zinc-600 sm:inline">
-            Shift + Enter for new line
-          </span>
+          <DocumentSelector
+            selectedDocumentId={documentId}
+            onSelect={handleDocumentSelect}
+            onClear={clearDocument}
+            disabled={disabled || isLoading || upload.isPending}
+          />
         </div>
 
         {isLoading ? (

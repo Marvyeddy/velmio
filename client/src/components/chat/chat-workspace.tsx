@@ -177,18 +177,19 @@ export function ChatWorkspace({
   // Send message
   // ----------------------------------
 
-  function handleSend(message: string) {
+  function handleSend(message: string, documentId: string | null) {
     const text = message.trim();
 
     if (!text || isLoading || isComposerDisabled) {
       return;
     }
 
-    sendMessage(
+    void sendMessage(
       { text },
       {
         body: {
           thread_id: threadIdRef.current,
+          document_id: documentId,
         },
       },
     );

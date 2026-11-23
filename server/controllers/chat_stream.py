@@ -3,7 +3,7 @@ import json
 import uuid
 from collections.abc import AsyncIterator
 
-from fastapi import Request
+from fastapi import Request, HTTPException, status
 from langchain_core.messages import HumanMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,7 @@ from server.models.user import User
 from server.schemas.chat import ChatRequest
 from server.services.conversation import conversation_service
 from server.utils.ai import extract_text
-
+from server.services.documents import get_user_document
 
 logger = get_app_logger(__name__)
 
@@ -69,6 +69,21 @@ async def chat_stream_controller(
 
     thread_id = conversation.id
 
+    # Validate selected document ownership.
+
+    if payload.document_id is not None:
+        document = await get_user_document(
+            document_id=payload.document_id,
+            user_id=user_id,
+            session=session,
+        )
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
     search_budget = {
         "used": 0,
         "lock": asyncio.Lock(),
@@ -77,6 +92,7 @@ async def chat_stream_controller(
         "configurable": {
             "thread_id": str(thread_id),
             "user_id": str(user_id),
+            "document_id": str(payload.document_id) if payload.document_id else None,
             "search_budget": search_budget,
         },
         "recursion_limit": 25,

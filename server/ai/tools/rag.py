@@ -6,7 +6,6 @@ from langchain_core.tools import tool
 from server.ai.rag.vectorstore import search_user_documents
 from server.core.logging import get_app_logger
 
-
 logger = get_app_logger(__name__)
 
 
@@ -17,7 +16,10 @@ async def search_documents(
 ) -> str:
     """Search the authenticated user's uploaded documents."""
 
-    user_id = config.get("configurable", {}).get("user_id")
+    configurable = config.get("configurable", {})
+
+    user_id = configurable.get("user_id")
+    document_id = configurable.get("document_id")
 
     if not user_id:
         return "Document search is unavailable for this request."
@@ -28,6 +30,7 @@ async def search_documents(
         documents = await search_user_documents(
             query=query,
             user_id=user_uuid,
+            document_id=uuid.UUID(str(document_id)) if document_id else None,
             limit=5,
         )
 
