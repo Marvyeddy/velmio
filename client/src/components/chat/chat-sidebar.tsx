@@ -37,6 +37,7 @@ import {
   useRenameConversation,
   useDeleteConversation,
 } from "@/hooks/use-conversations";
+import { useSidebarStore } from "@/stores/sidebar-store";
 
 type SelectedConversation = {
   id: string;
@@ -47,6 +48,7 @@ type DialogMode = "rename" | "delete" | null;
 
 export function ChatSidebar() {
   const navigate = useNavigate();
+  const closeSidebar = useSidebarStore((state) => state.closeSidebar);
   const conversationMatch = useMatch("/chat/:conversationId");
   const conversationId = conversationMatch?.params.conversationId;
 
@@ -191,6 +193,7 @@ export function ChatSidebar() {
       setTitle("");
 
       if (conversationId === id) {
+        closeSidebar();
         navigate("/chat");
       }
     } catch {
@@ -199,15 +202,20 @@ export function ChatSidebar() {
   }
 
   function handleNewChat() {
+    closeSidebar();
     navigate("/chat");
   }
 
   return (
     <>
-      <aside className="flex h-full w-64 shrink-0 flex-col border-r border-zinc-200 bg-[#f8f8fb] text-zinc-900 transition-colors duration-300 dark:border-white/[0.07] dark:bg-[#111116] dark:text-zinc-100">
+      <aside className="flex h-full w-72 max-w-[85vw] shrink-0 flex-col border-r border-zinc-200 bg-[#f8f8fb] text-zinc-900 transition-colors duration-300 lg:w-64 dark:border-white/[0.07] dark:bg-[#111116] dark:text-zinc-100">
         {/* Brand */}
-        <div className="flex h-18 items-center justify-between px-4">
-          <Link to="/chat" className="flex items-center gap-2.5">
+        <div className="flex h-18 items-center justify-between px-4 shrink-0">
+          <Link
+            to="/chat"
+            onClick={closeSidebar}
+            className="flex items-center gap-2.5"
+          >
             <div className="flex size-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-600/20">
               <Orbit className="size-5" />
             </div>
@@ -216,13 +224,14 @@ export function ChatSidebar() {
           </Link>
 
           <Button
+            type="button"
             variant="ghost"
             size="icon"
-            aria-label="Sidebar options"
-            className="rounded-lg text-zinc-500 hover:bg-zinc-200/70 dark:text-zinc-400 dark:hover:bg-white/6"
-            disabled
+            onClick={closeSidebar}
+            aria-label="Close sidebar"
+            className="size-10 rounded-lg text-zinc-500 hover:bg-zinc-200/70 lg:hidden dark:text-zinc-400 dark:hover:bg-white/6"
           >
-            <PanelLeft className="size-4.5" />
+            <X className="size-5" />
           </Button>
         </div>
 
@@ -242,6 +251,7 @@ export function ChatSidebar() {
         <div className="mt-3 px-3">
           <NavLink
             to="/documents"
+            onClick={closeSidebar}
             className={({ isActive }) =>
               `flex h-11 items-center gap-3 rounded-xl px-4 text-sm font-medium transition-colors ${
                 isActive
@@ -317,6 +327,7 @@ export function ChatSidebar() {
                   >
                     <Link
                       to={`/chat/${conversation.id}`}
+                      onClick={closeSidebar}
                       className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-3"
                       title={conversation.title}
                       aria-current={isActive ? "page" : undefined}
@@ -381,7 +392,7 @@ export function ChatSidebar() {
         </div>
 
         {/* Bottom settings */}
-        <div className="space-y-1 border-t border-zinc-200 p-3 dark:border-white/[0.07]">
+        <div className="shrink-0 space-y-1 border-t border-zinc-200 p-3 dark:border-white/[0.07]">
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -437,6 +448,7 @@ export function ChatSidebar() {
 
           <Link
             to="/profile"
+            onClick={closeSidebar}
             className="flex h-12 items-center gap-3 rounded-xl px-3 transition-colors hover:bg-zinc-200/70 dark:hover:bg-white/6"
           >
             <div className="flex size-8 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
