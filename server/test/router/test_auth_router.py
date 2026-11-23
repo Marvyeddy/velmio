@@ -1,5 +1,9 @@
+from types import SimpleNamespace
+import uuid
 import pytest
 from unittest.mock import AsyncMock, patch
+from server.dependencies.current_user import get_current_user
+from server.main import app
 from server.schemas.users import EmailRequest, PasswordRequest, UserCreate, UserLogin
 
 
@@ -53,20 +57,39 @@ async def test_verify_email_router(mock_controller, client):
 
 @pytest.mark.asyncio
 @patch(
-    "server.router.auth.resend_email_verification_controller", new_callable=AsyncMock
+    "server.router.auth.resend_email_verification_controller",
+    new_callable=AsyncMock,
 )
-async def test_resend_verification_email_router(mock_controller, client):
-    email = "newuser@email.com"
-
-    mock_controller.return_value = {"message": "Email verification resent successfully"}
-
-    response = await client.post(
-        "/api/v1/auth/resend-email-verification",
-        json=EmailRequest(email=email).model_dump(),
+async def test_resend_verification_email_router(
+    mock_controller,
+    client,
+):
+    mock_user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="newuser@email.com",
+        username="newuser",
+        verified=False,
     )
 
-    assert response.status_code == 200
-    assert response.json() == {"message": "Email verification resent successfully"}
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    mock_controller.return_value = {
+        "message": "Email verification resend request accepted."
+    }
+
+    try:
+        response = await client.get("/api/v1/auth/resend-email-verification")
+
+        assert response.status_code == 200
+
+        assert response.json() == {
+            "message": "Email verification resend request accepted."
+        }
+
+        mock_controller.assert_awaited_once()
+
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.mark.asyncio

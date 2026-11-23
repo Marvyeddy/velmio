@@ -12,9 +12,10 @@ from server.controllers.auth import (
     signup_controller,
     verify_email_controller,
 )
+from server.dependencies.current_user import get_current_user
 from server.external.database import get_session
+from server.models.user import User
 from server.schemas.users import EmailRequest, PasswordRequest, UserCreate, UserLogin
-
 
 auth_router = APIRouter()
 
@@ -46,15 +47,12 @@ async def signin_router(
     return await signin_controller(user_data, session)
 
 
-@auth_router.post("/resend-email-verification")
+@auth_router.get("/resend-email-verification")
 async def resend_email_verification_router(
-    bg: BackgroundTasks,
-    email: EmailRequest,
-    session: Annotated[AsyncSession, Depends(get_session)],
+    bg: BackgroundTasks, current_user: Annotated[User, Depends(get_current_user)]
 ):
 
-    email_dict = email.model_dump()
-    return await resend_email_verification_controller(bg, email_dict["email"], session)
+    return await resend_email_verification_controller(current_user, bg)
 
 
 @auth_router.post("/forgot-password")

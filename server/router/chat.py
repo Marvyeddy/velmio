@@ -6,6 +6,7 @@ from starlette.responses import StreamingResponse
 from server.controllers.chat import chat_controller
 from server.controllers.chat_stream import chat_stream_controller
 from server.dependencies.current_user import get_current_user
+from server.dependencies.verified_user import get_verified_user
 from server.external.database import get_session
 from server.models.user import User
 from server.schemas.chat import ChatRequest, ChatResponse
@@ -30,7 +31,7 @@ async def chat_route(
 async def stream_chat(
     payload: ChatRequest,
     request: Request,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_verified_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
     _, events = await chat_stream_controller(

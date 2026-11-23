@@ -11,6 +11,7 @@ from server.router.auth import auth_router
 from server.router.chat import chat_router
 from server.router.conversations import conversation_router
 from server.router.documents import document_router
+from server.router.user import user_router
 
 version = "v1"
 
@@ -50,6 +51,7 @@ async def root():
     return {"message": "Welcome Velmio"}
 
 
+app.include_router(user_router, prefix=f"/api/{version}/users", tags=["User"])
 app.include_router(auth_router, prefix=f"/api/{version}/auth", tags=["Auth"])
 app.include_router(chat_router, prefix=f"/api/{version}/chat", tags=["Chat"])
 app.include_router(

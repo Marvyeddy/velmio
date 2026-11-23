@@ -13,6 +13,8 @@ export function useAuth(){
         user: query.data ?? null,
         isLoading: query.isPending,
         isError: query.isError,
-        error: query.error
+        error: query.error,
+        refetch: query.refetch,
+        isFetching: query.isFetching,
     }
 }

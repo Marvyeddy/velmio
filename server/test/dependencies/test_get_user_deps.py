@@ -181,46 +181,6 @@ async def test_get_user_deps_user_not_active(
 )
 @patch("server.dependencies.current_user.decode_token")
 @patch("server.dependencies.current_user.token_in_blocklist", new_callable=AsyncMock)
-async def test_get_user_deps_user_not_verified(
-    mock_token_blocklist, mock_decode, mock_get_user, session
-):
-
-    user_id = uuid.uuid4()
-    user = User(
-        id=user_id,
-        email="newuser@email.com",
-        username="newuser",
-        password="hashed-password",
-        verified=False,
-        is_active=True,
-    )
-
-    session.add(user)
-    await session.commit()
-
-    mock_get_user.return_value = user
-    mock_token_blocklist.return_value = False
-    mock_decode.return_value = {
-        "sub": str(user_id),
-        "jti": "session-jti",
-        "type": "session",
-    }
-
-    with pytest.raises(EmailNotVerified):
-        await get_current_user(session_token="right-session-token", session=session)
-
-    mock_decode.assert_called_once()
-    mock_token_blocklist.assert_awaited_once()
-    mock_get_user.assert_awaited_once_with(str(user_id), session)
-
-
-@pytest.mark.asyncio
-@patch(
-    "server.dependencies.current_user.auth_service.get_user_by_id",
-    new_callable=AsyncMock,
-)
-@patch("server.dependencies.current_user.decode_token")
-@patch("server.dependencies.current_user.token_in_blocklist", new_callable=AsyncMock)
 async def test_get_user_deps_success(
     mock_token_blocklist, mock_decode, mock_get_user, session
 ):

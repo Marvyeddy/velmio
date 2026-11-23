@@ -100,18 +100,18 @@ async def test_resend_email_verification_controller_success(mock_send_email, ses
     mock_send_email.return_value = None
     mock_bg = Mock(spec=BackgroundTasks)
 
-    response = await resend_email_verification_controller(mock_bg, user.email, session)
+    response = await resend_email_verification_controller(user, mock_bg)
 
     assert response.status_code == 200
     response_data = json.loads(response.body.decode("utf-8"))
-    assert response_data["message"] == "Email verification resent successfully"
+    assert response_data["message"] == "Email verification resend request accepted."
 
     mock_bg.add_task.assert_called_once()
 
     args, kwargs = mock_bg.add_task.call_args
 
     assert args[0] == mock_send_email
-    assert kwargs["subject"] == "Verify your velmio account"
+    assert kwargs["subject"] == "Verify your Velmio account"
     assert kwargs["recipients"] == ["newuser@email.com"]
     assert kwargs["template_name"] == "verify_email.html"
     assert kwargs["template_context"]["username"] == "newuser"

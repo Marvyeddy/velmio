@@ -11,7 +11,6 @@ from server.models.user import User
 from server.services.auth import AuthService
 from server.utils.jwt_token import decode_token
 
-
 logger = get_app_logger(__name__)
 
 auth_service = AuthService()
@@ -62,10 +61,6 @@ async def get_current_user(
             user.id,
         )
         raise InvalidToken()
-
-    if not user.verified:
-        logger.warning("Authentication failed: Unverified user ID: %s", user.id)
-        raise EmailNotVerified()
 
     logger.debug("Authenticated user ID: %s", user.id)
 

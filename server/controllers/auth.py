@@ -13,6 +13,7 @@ from server.errors import (
 )
 from server.external.blocklist import add_token_to_blocklist, get_remaining_expiry
 from server.external.email import send_email
+from server.models.user import User
 from server.schemas.users import UserCreate, UserLogin
 from server.services.auth import AuthService
 from server.utils.hashing import verify_pwd
@@ -182,31 +183,28 @@ async def verify_email_controller(token: str, session: AsyncSession):
 
 
 async def resend_email_verification_controller(
-    bg: BackgroundTasks, email: str, session: AsyncSession
+    user: User,
+    bg: BackgroundTasks,
 ):
-
-    logger.info(f"Resend email verification attempt started for email: {email}")
-    user = await auth_service.get_user_by_email(email, session)
-
-    if not user:
-        logger.warning(
-            f"Resend email verification failed: User not found for email '{email}'."
-        )
-        raise UserNotFound()
-
     if user.verified:
         logger.warning(
-            f"Resend email verification failed: Email already verified for user '{user.username}' (ID: {user.id})."
+            "Email already verified for user ID: %s",
+            user.id,
         )
         raise EmailAlreadyVerified()
 
     token = create_email_verification_token(str(user.id))
+
     verification_url = f"{cfg.FRONTEND_URL}/verify-email?token={token}"
 
-    logger.info(f"Scheduling email verification background task for user ID: {user.id}")
+    logger.info(
+        "Scheduling verification email for user ID: %s",
+        user.id,
+    )
+
     bg.add_task(
         send_email,
-        subject="Verify your velmio account",
+        subject="Verify your Velmio account",
         recipients=[user.email],
         template_name="verify_email.html",
         template_context={
@@ -216,11 +214,9 @@ async def resend_email_verification_controller(
         },
     )
 
-    logger.info(
-        f"Email verification resent successfully for user {user.username} (ID: {user.id})."
-    )
     return JSONResponse(
-        status_code=200, content={"message": "Email verification resent successfully"}
+        status_code=200,
+        content={"message": "Email verification resend request accepted."},
     )
 
 
