@@ -6,7 +6,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 def require_middleware(app: FastAPI):
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["localhost", "127.0.0.1"],
+        allowed_hosts=["localhost", "127.0.0.1", "16.192.106.246"],
     )
     app.add_middleware(
         CORSMiddleware,

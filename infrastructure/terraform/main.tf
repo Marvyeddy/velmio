@@ -92,8 +92,9 @@ resource "aws_vpc_security_group_egress_rule" "all" {
 # ============================================================
 
 resource "aws_instance" "velmio" {
-  ami           = data.aws_ssm_parameter.amazon_linux.value
-  instance_type = var.instance_type
+  iam_instance_profile = aws_iam_instance_profile.velmio_ec2.name
+  ami                  = data.aws_ssm_parameter.amazon_linux.value
+  instance_type        = var.instance_type
 
   subnet_id = sort(data.aws_subnets.default.ids)[0]
 
