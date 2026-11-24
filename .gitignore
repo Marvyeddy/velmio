@@ -25,6 +25,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+# Old migration backups
+/migration-backup/
 
 # Python virtual environments
 .venv/
