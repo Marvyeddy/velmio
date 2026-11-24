@@ -22,6 +22,7 @@ import { conversationKeys, useConversation } from "@/hooks/use-conversations";
 
 import { CopyResponse } from "./chat-response";
 import { ChatComposer } from "./chat-composer";
+import velmioLogo from "@/assets/velmio-logo.svg";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 
 type ChatWorkspaceProps = {
@@ -259,8 +260,10 @@ export function ChatWorkspace({
                 <div className="absolute -inset-5 rounded-full bg-violet-500/10 blur-2xl" />
 
                 <img
-                  src="src/assets/velmio-logo.svg"
+                  src={velmioLogo}
                   alt="Velmio logo"
+                  width={56}
+                  height={56}
                   className="size-14 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
                 />
               </div>
