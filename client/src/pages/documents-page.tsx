@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { DeleteDocumentDialog } from "@/components/documents/delete-dialog";
 
 import type { Document } from "@/types/documents";
+import { SEO } from "@/components/seo/seo";
 
 export function DocumentsPage() {
   const { data: documents = [], isPending, isError, refetch } = useDocuments();
@@ -49,6 +50,10 @@ export function DocumentsPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-5 py-10">
+      <SEO
+        title="Documents"
+        description="Upload, manage, and analyze your documents with Velmio AI."
+      />
       {/* Header */}
       <div className="mb-8 flex items-center justify-between gap-4">
         <div>

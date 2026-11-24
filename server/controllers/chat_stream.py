@@ -78,11 +78,11 @@ async def chat_stream_controller(
             session=session,
         )
 
-    if document is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found.",
-        )
+        if document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found.",
+            )
 
     search_budget = {
         "used": 0,

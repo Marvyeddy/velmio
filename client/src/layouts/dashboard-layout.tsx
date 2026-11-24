@@ -29,6 +29,7 @@ export function DashboardLayout() {
 
   return (
     <main className="relative flex h-dvh overflow-hidden bg-white text-zinc-950 dark:bg-[#0e0e13] dark:text-zinc-100">
+      <meta name="robots" content="noindex, nofollow" />
       {/* Mobile overlay */}
       {isOpen && (
         <div

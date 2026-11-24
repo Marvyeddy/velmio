@@ -10,6 +10,7 @@ import {
 
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/seo/seo";
 
 export function ProfilePage() {
   const { user, isLoading, isError, refetch } = useAuth();
@@ -44,6 +45,10 @@ export function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-[#fafafa] px-5 py-10 text-zinc-900 dark:bg-[#0e0e13] dark:text-zinc-100 sm:px-8">
+      <SEO
+        title="My profile"
+        description="Manage your Velmio account and personal information."
+      />
       <div className="mx-auto max-w-3xl">
         <Link
           to="/chat"

@@ -11,9 +11,11 @@ import {
   MessageSquareText,
   MoveUpRight,
   Sparkles,
-  WandSparkles,
   Zap,
 } from "lucide-react";
+import { SEO } from "@/components/seo/seo";
+import { SEO_CONFIG } from "@/lib/seo-config";
+import velmioLogo from "@/assets/velmio-logo.svg";
 
 const features = [
   {
@@ -21,7 +23,7 @@ const features = [
     number: "01",
     title: "Intelligence that gets you.",
     description:
-      "Conversations that feel natural, with context that carries forward. Less repeating yourself. More getting things done.",
+      "Enjoy natural AI conversations with personalized memory that remembers relevant details and carries context forward.",
     className: "md:col-span-2",
   },
   {
@@ -29,7 +31,7 @@ const features = [
     number: "02",
     title: "Your knowledge. Unlocked.",
     description:
-      "Bring your PDFs, documents, and data into the conversation. Ask better questions. Find answers faster.",
+      "Upload PDF, DOCX, and CSV files. Ask questions, summarize information, and discover insights directly from your documents.",
     className: "",
   },
   {
@@ -37,7 +39,7 @@ const features = [
     number: "03",
     title: "Built to take action.",
     description:
-      "Go beyond answers with intelligent tools that help you get real work done.",
+      "Search the web, explore information, and research topics with an intelligent AI assistant powered by integrated tools.",
     className: "",
   },
   {
@@ -45,32 +47,21 @@ const features = [
     number: "04",
     title: "Everything connects.",
     description:
-      "One beautifully simple workspace for ideas, research, and the work that matters.",
+      "Manage your AI conversations, uploaded documents, research, and ideas in one beautifully simple workspace.",
     className: "md:col-span-2",
   },
 ];
 
-function Logo({ light = false }: { light?: boolean }) {
-  return (
-    <Link to="/" className="flex items-center gap-2.5">
-      <div className="flex size-9 items-center justify-center rounded-xl bg-violet-500 text-white shadow-[0_0_24px_rgba(139,92,246,.35)]">
-        <WandSparkles className="size-5" />
-      </div>
-      <span
-        className={`text-xl font-bold tracking-[-0.06em] ${
-          light ? "text-white" : "text-zinc-950"
-        }`}
-      >
-        velmio<span className="text-violet-400">.</span>
-      </span>
-    </Link>
-  );
-}
-
 function Navbar() {
   return (
     <header className="relative z-50 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
-      <Logo light />
+      <img
+        src={velmioLogo}
+        alt="Velmio logo"
+        width={48}
+        height={48}
+        className="size-12 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+      />
 
       <nav className="hidden items-center gap-9 text-sm text-zinc-400 md:flex">
         <a href="#features" className="transition hover:text-white">
@@ -234,9 +225,9 @@ function Hero() {
           </h1>
 
           <p className="mx-auto mt-8 max-w-xl text-base leading-8 text-zinc-400 sm:text-lg">
-            Meet your AI-powered space for thinking bigger, creating faster, and
-            making brilliant things happen. All your curiosity. One intelligent
-            companion.
+            Meet Velmio, your intelligent AI assistant for natural
+            conversations, document analysis, web research, and personalized AI
+            experiences. All your curiosity. One intelligent companion.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
@@ -450,7 +441,13 @@ function Footer() {
     <footer className="border-t border-white/10">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-12 md:flex-row md:items-center md:justify-between lg:px-10">
         <div>
-          <Logo light />
+          <img
+            src={velmioLogo}
+            alt="Velmio logo"
+            width={40}
+            height={40}
+            className="size-10 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+          />
           <p className="mt-3 text-xs text-zinc-500">
             A little intelligence. Infinite possibilities.
           </p>
@@ -479,6 +476,11 @@ function Footer() {
 export function HomePage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#09090e] font-sans text-white antialiased selection:bg-violet-500/30">
+      <SEO
+        description="Velmio is an AI assistant for intelligent conversations, PDF and document analysis, web research, and personalized AI memory."
+        canonical={`${SEO_CONFIG.siteUrl}/`}
+        noIndex={false}
+      />
       <Navbar />
       <main>
         <Hero />

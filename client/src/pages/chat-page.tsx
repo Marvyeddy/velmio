@@ -1,6 +1,7 @@
 import { useLocation, useParams } from "react-router";
 
 import { ChatWorkspace } from "@/components/chat/chat-workspace";
+import { SEO } from "@/components/seo/seo";
 
 type ChatRouteState = {
   preserveSessionKey?: string;
@@ -21,13 +22,19 @@ export function ChatPage() {
     Boolean(conversationId) && !routeState?.preserveSessionKey;
 
   return (
-    <div className="h-full min-w-0 overflow-hidden">
-      <ChatWorkspace
-        key={sessionKey}
-        sessionKey={sessionKey}
-        conversationId={conversationId ?? null}
-        shouldLoadHistory={shouldLoadHistory}
+    <>
+      <SEO
+        title="Chat"
+        description="Explore intelligent AI conversations with Velmio."
       />
-    </div>
+      <div className="h-full min-w-0 overflow-hidden">
+        <ChatWorkspace
+          key={sessionKey}
+          sessionKey={sessionKey}
+          conversationId={conversationId ?? null}
+          shouldLoadHistory={shouldLoadHistory}
+        />
+      </div>
+    </>
   );
 }

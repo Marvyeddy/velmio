@@ -1,0 +1,21 @@
+{
+    "id": "/",
+    "name": "Velmio - Your Intelligent AI Assistant",
+    "short_name": "Velmio",
+    "description": "Chat with AI, analyze documents, search the web, and experience personalized conversations.",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#0e0e13",
+    "theme_color": "#7c3aed",
+    "lang": "en",
+    "orientation": "any",
+    "icons": [
+      {
+        "src": "/velmio-logo.png",
+        "sizes": "1024x1024",
+        "type": "image/png",
+        "purpose": "any"
+      }
+    ]
+  }

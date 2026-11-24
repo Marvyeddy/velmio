@@ -215,9 +215,11 @@ export function ChatSidebar() {
             onClick={closeSidebar}
             className="flex items-center gap-2.5"
           >
-            <div className="flex size-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-600/20">
-              <Orbit className="size-5" />
-            </div>
+            <img
+              src="src/assets/velmio-logo.svg"
+              alt="Velmio logo"
+              className="size-9 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+            />
 
             <span className="text-lg font-bold tracking-tight">Velmio</span>
           </Link>

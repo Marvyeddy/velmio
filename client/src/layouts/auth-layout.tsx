@@ -30,9 +30,11 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
         {/* Logo */}
         <div className="relative z-10 p-10 xl:p-14">
           <Link to="/" className="inline-flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-violet-500 shadow-[0_0_35px_rgba(139,92,246,.4)]">
-              <Sparkles className="size-6 text-white" />
-            </div>
+            <img
+              src="src/assets/velmio-logo.svg"
+              alt="Velmio logo"
+              className="size-12 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+            />
 
             <span className="text-2xl font-bold tracking-[-0.06em] text-white">
               velmio<span className="text-violet-400">.</span>

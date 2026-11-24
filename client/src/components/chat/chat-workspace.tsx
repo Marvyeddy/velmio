@@ -258,9 +258,11 @@ export function ChatWorkspace({
               <div className="relative mb-8">
                 <div className="absolute -inset-5 rounded-full bg-violet-500/10 blur-2xl" />
 
-                <div className="relative flex size-18 items-center justify-center rounded-3xl border border-violet-500/15 bg-violet-500/10 text-violet-600 shadow-lg shadow-violet-500/5 dark:bg-violet-500/15 dark:text-violet-400">
-                  <Orbit className="size-9" />
-                </div>
+                <img
+                  src="src/assets/velmio-logo.svg"
+                  alt="Velmio logo"
+                  className="size-14 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+                />
               </div>
 
               <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
