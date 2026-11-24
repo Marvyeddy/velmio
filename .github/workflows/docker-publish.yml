@@ -88,14 +88,14 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            context: .
+            file: ./server/Dockerfile
+            platforms: linux/amd64
+            push: true
+            tags: ${{ steps.metadata.outputs.tags }}
+            labels: ${{ steps.metadata.outputs.labels }}
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
 
       # ======================================================
       # Display published image
