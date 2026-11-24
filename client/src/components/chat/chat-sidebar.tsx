@@ -22,6 +22,7 @@ import {
 
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import velmioLogo from "@/assets/velmio-logo.svg";
 
 import {
   DropdownMenu,
@@ -215,9 +216,11 @@ export function ChatSidebar() {
             className="flex items-center gap-2.5"
           >
             <img
-              src="src/assets/velmio-logo.svg"
+              src={velmioLogo}
               alt="Velmio logo"
-              className="size-9 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+              width={40}
+              height={40}
+              className="size-14 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
             />
 
             <span className="text-lg font-bold tracking-tight">Velmio</span>

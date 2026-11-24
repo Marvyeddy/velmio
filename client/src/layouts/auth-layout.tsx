@@ -8,6 +8,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
+import velmioLogo from "@/assets/velmio-logo.svg";
 
 type AuthLayoutProps = {
   children: ReactNode;
@@ -31,9 +32,11 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
         <div className="relative z-10 p-10 xl:p-14">
           <Link to="/" className="inline-flex items-center gap-3">
             <img
-              src="src/assets/velmio-logo.svg"
+              src={velmioLogo}
               alt="Velmio logo"
-              className="size-12 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+              width={46}
+              height={46}
+              className="size-14 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
             />
 
             <span className="text-2xl font-bold tracking-[-0.06em] text-white">
