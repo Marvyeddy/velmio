@@ -1,19 +1,47 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { ChatWorkspace } from "@/components/chat/chat-workspace";
 import userEvent from "@testing-library/user-event";
 import { server } from "./mocks/server";
 import { http, HttpResponse } from "msw";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
+function renderChatWorkspace() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={["/chat"]}>
+        <ChatWorkspace
+          conversationId={null}
+          sessionKey="test-session"
+          shouldLoadHistory={false}
+          key="test-session"
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 describe("ChatWorkspace", () => {
   it("displays welcome message when there are no messages typed", () => {
-    render(<ChatWorkspace />);
+    renderChatWorkspace();
 
     expect(
       screen.getByRole("heading", {
-        name: /welcome to velmio/i,
+        name: /your mind, without limits\./i,
       }),
     ).toBeInTheDocument();
   });
@@ -21,7 +49,7 @@ describe("ChatWorkspace", () => {
   it("displays a user message after submitting it", async () => {
     const user = userEvent.setup();
 
-    render(<ChatWorkspace />);
+    renderChatWorkspace();
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
@@ -29,11 +57,11 @@ describe("ChatWorkspace", () => {
 
     await user.type(input, "Hello{Enter}");
 
-    expect(screen.getByText("Hello")).toBeInTheDocument();
+    expect(await screen.findByText("Hello")).toBeInTheDocument();
 
     expect(
       screen.queryByRole("heading", {
-        name: /welcome to velmio/i,
+        name: /your mind, without limits\./i,
       }),
     ).not.toBeInTheDocument();
   });
@@ -41,18 +69,25 @@ describe("ChatWorkspace", () => {
   it("preserves previous message while sending a new message", async () => {
     const user = userEvent.setup();
 
-    render(<ChatWorkspace />);
+    renderChatWorkspace();
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
     });
 
     await user.type(input, "Hello{Enter}");
+
+    expect(await screen.findByText("Hello")).toBeInTheDocument();
+
+    await screen.findByRole("button", {
+      name: /send message/i,
+    });
+
     await user.type(input, "What is your name{Enter}");
 
     expect(screen.getByText("Hello")).toBeInTheDocument();
 
-    expect(screen.getByText("What is your name")).toBeInTheDocument();
+    expect(await screen.findByText("What is your name")).toBeInTheDocument();
   });
 
   it("displays a streamed assistant response", async () => {
@@ -99,7 +134,7 @@ describe("ChatWorkspace", () => {
       }),
     );
 
-    render(<ChatWorkspace />);
+    renderChatWorkspace();
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
@@ -163,7 +198,7 @@ describe("ChatWorkspace", () => {
       }),
     );
 
-    render(<ChatWorkspace />);
+    renderChatWorkspace();
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,
@@ -173,8 +208,8 @@ describe("ChatWorkspace", () => {
 
     expect(await screen.findByText("Response to Hello")).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /send message/i }));
+    await screen.findByRole("button", {
+      name: /send message/i,
     });
 
     await user.type(input, "Explain FastAPI{Enter}");
@@ -245,7 +280,7 @@ describe("ChatWorkspace", () => {
       }),
     );
 
-    render(<ChatWorkspace />);
+    renderChatWorkspace();
 
     const input = screen.getByRole("textbox", {
       name: /message velmio/i,

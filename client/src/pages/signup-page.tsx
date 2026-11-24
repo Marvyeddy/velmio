@@ -50,6 +50,10 @@ export function SignupPage() {
 
       navigate("/verify-email-required", {
         replace: true,
+        state: {
+          email: credentials.email,
+          registered: true,
+        },
       });
     } catch {
       // Display the mutation error below the form.

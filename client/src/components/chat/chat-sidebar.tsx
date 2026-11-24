@@ -3,7 +3,6 @@ import { Link, NavLink, useMatch, useNavigate } from "react-router";
 
 import {
   MessageSquarePlus,
-  Orbit,
   Sun,
   Moon,
   Monitor,

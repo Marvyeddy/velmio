@@ -13,7 +13,6 @@ import { VerifyEmailPage } from "./pages/verify-email-page";
 import { ProtectedRoute } from "./components/auth/protected-route";
 import { ResetPasswordGuard } from "./guard/reset-password-guard";
 import { VerifyEmailGuard } from "./guard/verify-email-guard";
-import { VerificationRequiredGuard } from "./guard/verify-email-required-guard";
 import { ProfilePage } from "./pages/profile-page";
 import { DocumentsPage } from "./pages/documents-page";
 import { DashboardLayout } from "./layouts/dashboard-layout";
@@ -35,12 +34,10 @@ const App = () => {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
         </Route>
 
-        <Route element={<VerificationRequiredGuard />}>
-          <Route
-            path="/verify-email-required"
-            element={<VerifyEmailRequiredPage />}
-          />
-        </Route>
+        <Route
+          path="/verify-email-required"
+          element={<VerifyEmailRequiredPage />}
+        />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
