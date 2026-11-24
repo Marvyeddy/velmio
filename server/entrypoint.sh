@@ -8,4 +8,9 @@ alembic -c /app/server/alembic.ini upgrade head
 
 echo "Starting fastapi..."
 
-exec uvicorn server.main:app --host 0.0.0.0 --port 80
+exec uvicorn server.main:app \
+    --host 0.0.0.0 \
+    --port 80 \
+    --workers 1 \
+    --proxy-headers \
+    --forwarded-allow-ips="*"

@@ -1,24 +1,41 @@
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: velmio-backend:latest
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    LANGGRAPH_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
 services:
   api:
-    build: .
+    <<: *backend
     container_name: velmio-api
     ports:
-      - "8000:80"
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/velmio
-      LANGGRAPH_URL: postgresql://postgres:postgres@db:5432/velmio
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - "127.0.0.1:8000:80"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:80/health', timeout=5)"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   celery:
-    build: .
+    <<: *backend
     container_name: velmio-celery
     command:
       - celery
@@ -27,41 +44,40 @@ services:
       - worker
       - --loglevel=info
       - --concurrency=1
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/velmio
-      LANGGRAPH_URL: postgresql://postgres:postgres@db:5432/velmio
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api:
+        condition: service_healthy
+    stop_grace_period: 2m
 
   db:
     image: postgres:17
+    container_name: velmio-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: velmio
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d velmio"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7
+    container_name: velmio-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

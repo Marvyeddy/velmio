@@ -51,6 +51,11 @@ async def root():
     return {"message": "Welcome Velmio"}
 
 
+@app.get("/health", include_in_schema=False)
+async def health_check():
+    return {"status": "healthy"}
+
+
 app.include_router(user_router, prefix=f"/api/{version}/users", tags=["User"])
 app.include_router(auth_router, prefix=f"/api/{version}/auth", tags=["Auth"])
 app.include_router(chat_router, prefix=f"/api/{version}/chat", tags=["Chat"])

@@ -7,7 +7,7 @@ ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
 class Settings(BaseSettings):
     DATABASE_URL: str = Field(..., alias="DATABASE_URL")
-    TEST_DATABASE_URL: str = Field(..., alias="TEST_DATABASE_URL")
+    TEST_DATABASE_URL: str | None = Field(default=None, alias="TEST_DATABASE_URL")
     LANGGRAPH_URL: str = Field(..., alias="LANGGRAPH_URL")
     MAIL_USERNAME: str = Field(..., alias="MAIL_USERNAME")
     MAIL_PASSWORD: SecretStr = Field(..., alias="MAIL_PASSWORD")
@@ -19,7 +19,6 @@ class Settings(BaseSettings):
     COOKIE_SECURE: bool = Field(default=False, alias="COOKIE_SECURE")
     GOOGLE_API_KEY: str = Field(..., alias="GOOGLE_API_KEY")
     TAVILY_API_KEY: str = Field(..., alias="TAVILY_API_KEY")
-    WEATHER_API_KEY: str = Field(..., alias="WEATHER_API_KEY")
     CLOUDINARY_CLOUD_NAME: str = Field(..., alias="CLOUDINARY_CLOUD_NAME")
     CLOUDINARY_API_KEY: str = Field(..., alias="CLOUDINARY_API_KEY")
     CLOUDINARY_API_SECRET: str = Field(..., alias="CLOUDINARY_API_SECRET")
