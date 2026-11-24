@@ -218,8 +218,8 @@ export function ChatSidebar() {
             <img
               src={velmioLogo}
               alt="Velmio logo"
-              width={40}
-              height={40}
+              width={20}
+              height={20}
               className="size-14 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
             />
 
