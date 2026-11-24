@@ -1,0 +1,154 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - ".github/workflows/docker-python.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - ".github/workflows/docker_python.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run Backend Tests
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 15
+
+    services:
+      # ======================================================
+      # PostgreSQL
+      # ======================================================
+
+      postgres:
+        image: postgres:17
+
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U testuser -d testdb"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # ======================================================
+      # Redis
+      # ======================================================
+
+      redis:
+        image: redis:7
+
+        ports:
+          - 6379:6379
+
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # ======================================================
+      # Checkout repository
+      # ======================================================
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ======================================================
+      # Configure Python
+      # ======================================================
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # ======================================================
+      # Configure uv
+      # ======================================================
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "server/uv.lock"
+
+      # ======================================================
+      # Install dependencies
+      # ======================================================
+
+      - name: Install dependencies
+        working-directory: server
+        run: uv sync --dev --locked
+
+      # ======================================================
+      # Run backend tests
+      # ======================================================
+
+      - name: Run pytest
+        working-directory: server
+
+        env:
+          # Database
+          DATABASE_URL: postgresql+psycopg://testuser:testpass@localhost:5432/testdb
+          TEST_DATABASE_URL: postgresql+psycopg://testuser:testpass@localhost:5432/testdb
+          LANGGRAPH_URL: postgresql://testuser:testpass@localhost:5432/testdb
+
+          # Email
+          MAIL_USERNAME: "dummyuser@example.com"
+          MAIL_PASSWORD: "dummy-password"
+          MAIL_FROM: "dummyuser@example.com"
+
+          # Authentication
+          JWT_KEY: "dummy-jwt-key-for-testing-only"
+          JWT_ALG: "HS256"
+          COOKIE_SECURE: "false"
+
+          # Frontend
+          FRONTEND_URL: "http://localhost:5173"
+
+          # Redis
+          REDIS_URL: "redis://localhost:6379/0"
+
+          # Celery
+          CELERY_BROKER_URL: "redis://localhost:6379/1"
+
+          # AI services
+          GOOGLE_API_KEY: "dummy-google-api-key"
+          TAVILY_API_KEY: "dummy-tavily-api-key"
+          WEATHER_API_KEY: "dummy-weather-api-key"
+
+          # Cloudinary
+          CLOUDINARY_CLOUD_NAME: "dummy-cloud-name"
+          CLOUDINARY_API_KEY: "dummy-api-key"
+          CLOUDINARY_API_SECRET: "dummy-api-secret"
+
+          # Pinecone
+          PINECONE_API_KEY: "dummy-pinecone-api-key"
+          PINECONE_INDEX_NAME: "velmio-test"
+
+        run: uv run --locked pytest -v
