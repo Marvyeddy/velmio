@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "server/**"
-      - "Dockerfile"
       - ".dockerignore"
       - ".github/workflows/docker-publish.yml"
 
