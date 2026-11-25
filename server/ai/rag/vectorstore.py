@@ -1,6 +1,6 @@
 import asyncio
-from functools import lru_cache
 import uuid
+from functools import lru_cache
 
 from langchain_core.documents import Document
 from langchain_pinecone import PineconeVectorStore
@@ -8,11 +8,18 @@ from pinecone import Pinecone
 
 from server.ai.rag.embedding import embeddings
 from server.core.config import config as cfg
+from server.core.logging import get_app_logger
+
+logger = get_app_logger(__name__)
+
+EMBEDDING_BATCH_SIZE = 20
+EMBEDDING_BATCH_DELAY = 15
 
 
 @lru_cache(maxsize=1)
 def get_pinecone_index():
     pc = Pinecone(api_key=cfg.PINECONE_API_KEY)
+
     return pc.Index(name=cfg.PINECONE_INDEX_NAME)
 
 
@@ -29,7 +36,7 @@ async def index_document(
     document_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> list[str]:
-    """Generate embeddings and index document chunks."""
+    """Generate embeddings and index document chunks in batches."""
 
     document_id_str = str(document_id)
     user_id_str = str(user_id)
@@ -56,11 +63,53 @@ async def index_document(
 
         vector_ids.append(vector_id)
 
-    # Run synchronous indexing outside the event loop.
-    await asyncio.to_thread(
-        get_vector_store().add_documents,
-        documents=prepared_chunks,
-        ids=vector_ids,
+    if not prepared_chunks:
+        return []
+
+    vector_store = get_vector_store()
+    total_chunks = len(prepared_chunks)
+
+    total_batches = (total_chunks + EMBEDDING_BATCH_SIZE - 1) // EMBEDDING_BATCH_SIZE
+
+    logger.info(
+        "Indexing document %s: chunks=%s, batches=%s",
+        document_id_str,
+        total_chunks,
+        total_batches,
+    )
+
+    for start in range(
+        0,
+        total_chunks,
+        EMBEDDING_BATCH_SIZE,
+    ):
+        end = min(
+            start + EMBEDDING_BATCH_SIZE,
+            total_chunks,
+        )
+
+        batch_number = (start // EMBEDDING_BATCH_SIZE) + 1
+
+        logger.info(
+            "Indexing document %s: batch %s/%s",
+            document_id_str,
+            batch_number,
+            total_batches,
+        )
+
+        await asyncio.to_thread(
+            vector_store.add_documents,
+            documents=prepared_chunks[start:end],
+            ids=vector_ids[start:end],
+        )
+
+        if end < total_chunks:
+            await asyncio.sleep(EMBEDDING_BATCH_DELAY)
+
+    logger.info(
+        "Successfully indexed document %s: vectors=%s",
+        document_id_str,
+        len(vector_ids),
     )
 
     return vector_ids

@@ -18,7 +18,6 @@ from server.models.document import Document, DocumentStatus
 from server.services.documents import process_document_bytes
 from server.tasks.exceptions import PermanentDocumentError
 
-
 logger = get_app_logger(__name__)
 
 
@@ -244,17 +243,33 @@ def process_document(self, document_id: str):
         DocumentCleanupError,
         DocumentAttemptLost,
     ):
-        # Do not automatically retry permanent errors,
-        # unsafe cleanup failures, or ownership conflicts.
+        # Do not retry permanent or unsafe failures.
         raise
 
     except Exception as exc:
         if final_attempt:
             raise
 
-        delay = min(
-            30 * (2**self.request.retries),
-            300,
+        is_rate_limited = "RESOURCE_EXHAUSTED" in str(exc) or "429" in str(exc)
+
+        if is_rate_limited:
+            delay = min(
+                65 * (2**self.request.retries),
+                300,
+            )
+        else:
+            delay = min(
+                30 * (2**self.request.retries),
+                300,
+            )
+
+        logger.warning(
+            "Retrying document %s in %s seconds. Retry %s/%s. Rate limited: %s",
+            document_id,
+            delay,
+            self.request.retries + 1,
+            self.max_retries,
+            is_rate_limited,
         )
 
         raise self.retry(
