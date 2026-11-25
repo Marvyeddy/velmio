@@ -1,8 +1,9 @@
-import { Menu, Orbit } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Link } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import velmioLogo from "@/assets/velmio-logo.svg";
 
 export function MobileHeader() {
   const isOpen = useSidebarStore((state) => state.isOpen);
@@ -24,9 +25,13 @@ export function MobileHeader() {
       </Button>
 
       <Link to="/chat" className="flex items-center gap-2">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-violet-600 text-white">
-          <Orbit className="size-4.5" />
-        </div>
+        <img
+          src={velmioLogo}
+          alt="Velmio logo"
+          width={20}
+          height={20}
+          className="size-10 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+        />
 
         <span className="text-base font-bold tracking-tight">Velmio</span>
       </Link>
