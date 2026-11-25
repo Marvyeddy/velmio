@@ -439,10 +439,18 @@ async def signout_controller(
 
     response.delete_cookie(
         key="session-token",
+        path="/",
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite="lax",
     )
 
     response.delete_cookie(
         key="refresh-token",
+        path="/",
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite="lax",
     )
 
     logger.info(

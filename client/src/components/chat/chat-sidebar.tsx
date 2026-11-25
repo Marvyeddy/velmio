@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   X,
   Files,
+  LogOut,
 } from "lucide-react";
 
 import { useTheme } from "@/components/theme-provider";
@@ -36,7 +37,9 @@ import {
   useRenameConversation,
   useDeleteConversation,
 } from "@/hooks/use-conversations";
+
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSignout } from "@/hooks/use-auth";
 
 type SelectedConversation = {
   id: string;
@@ -50,6 +53,8 @@ export function ChatSidebar() {
   const closeSidebar = useSidebarStore((state) => state.closeSidebar);
   const conversationMatch = useMatch("/chat/:conversationId");
   const conversationId = conversationMatch?.params.conversationId;
+
+  const signoutMutation = useSignout();
 
   const { theme, setTheme } = useTheme();
 
@@ -200,9 +205,31 @@ export function ChatSidebar() {
     }
   }
 
+  // ----------------------------------
+  // New chat
+  // ----------------------------------
+
   function handleNewChat() {
     closeSidebar();
     navigate("/chat");
+  }
+
+  // ----------------------------------
+  // Signout
+  // ----------------------------------
+
+  async function handleSignout() {
+    if (signoutMutation.isPending) return;
+
+    try {
+      await signoutMutation.mutateAsync();
+
+      closeSidebar();
+
+      navigate("/signin", { replace: true });
+    } catch {
+      // The mutation error is displayed in the UI.
+    }
   }
 
   return (
@@ -220,7 +247,7 @@ export function ChatSidebar() {
               alt="Velmio logo"
               width={20}
               height={20}
-              className="size-14 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
+              className="size-10 shrink-0 rounded-xl shadow-lg shadow-violet-600/20"
             />
 
             <span className="text-lg font-bold tracking-tight">Velmio</span>
@@ -449,6 +476,7 @@ export function ChatSidebar() {
             <span className="ml-auto text-[10px] text-zinc-400">Soon</span>
           </div>
 
+          {/* My account */}
           <Link
             to="/profile"
             onClick={closeSidebar}
@@ -466,6 +494,34 @@ export function ChatSidebar() {
               </p>
             </div>
           </Link>
+
+          {/* Signout */}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void handleSignout()}
+            disabled={signoutMutation.isPending}
+            className="h-11 w-full justify-start gap-3 rounded-xl px-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+          >
+            {signoutMutation.isPending ? (
+              <LoaderCircle className="size-4.5 animate-spin" />
+            ) : (
+              <LogOut className="size-4.5" />
+            )}
+
+            <span>
+              {signoutMutation.isPending ? "Signing out..." : "Sign out"}
+            </span>
+          </Button>
+
+          {signoutMutation.isError && (
+            <p
+              role="alert"
+              className="px-3 pb-2 text-xs leading-5 text-red-500 dark:text-red-400"
+            >
+              Failed to sign out. Please try again.
+            </p>
+          )}
         </div>
       </aside>
 

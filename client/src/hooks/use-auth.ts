@@ -1,6 +1,6 @@
 
-import { getCurrentUser } from "@/lib/auth-api";
-import { useQuery } from "@tanstack/react-query";
+import { getCurrentUser, signout } from "@/lib/auth-api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useAuth() {
   const query = useQuery({
@@ -19,4 +19,20 @@ export function useAuth() {
     refetch: query.refetch,
     isFetching: query.isFetching,
   };
+}
+
+export function useSignout() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: signout,
+
+    onSuccess: async () => {
+      await queryClient.cancelQueries();
+
+      queryClient.clear();
+
+      queryClient.setQueryData(["auth", "user"], null);
+    },
+  });
 }

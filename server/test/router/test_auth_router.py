@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import uuid
+from fastapi.responses import JSONResponse
 import pytest
 from unittest.mock import AsyncMock, patch
 from server.dependencies.current_user import get_current_user
@@ -183,12 +184,27 @@ async def test_signout_router(
     session_token = "mock-session-token"
     refresh_token = "mock-refresh-token"
 
-    mock_signout.return_value = {"message": "Logged out successfully"}
+    mock_response = JSONResponse(
+        content={"message": "Logged out successfully"},
+        status_code=200,
+    )
+
+    mock_response.delete_cookie(
+        key="session-token",
+        path="/",
+    )
+
+    mock_response.delete_cookie(
+        key="refresh-token",
+        path="/",
+    )
+
+    mock_signout.return_value = mock_response
 
     client.cookies.set("session-token", session_token)
     client.cookies.set("refresh-token", refresh_token)
 
-    response = await client.get("/api/v1/auth/signout")
+    response = await client.post("/api/v1/auth/signout")
 
     assert response.status_code == 200
 
@@ -197,4 +213,16 @@ async def test_signout_router(
     mock_signout.assert_awaited_once_with(
         session_token,
         refresh_token,
+    )
+
+    cookies = response.headers.get_list("set-cookie")
+
+    assert any(
+        cookie.startswith("session-token=") and "Max-Age=0" in cookie
+        for cookie in cookies
+    )
+
+    assert any(
+        cookie.startswith("refresh-token=") and "Max-Age=0" in cookie
+        for cookie in cookies
     )

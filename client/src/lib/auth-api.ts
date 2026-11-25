@@ -128,3 +128,13 @@ export async function resetPassword(
   }
 }
 
+export async function signout(): Promise<void> {
+  const response = await fetch(`${apiUrl}/api/v1/auth/signout`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to sign out. Please try again.");
+  }
+}

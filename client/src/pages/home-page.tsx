@@ -16,6 +16,7 @@ import {
 import { SEO } from "@/components/seo/seo";
 import { SEO_CONFIG } from "@/lib/seo-config";
 import velmioLogo from "@/assets/velmio-logo.svg";
+import { useAuth } from "@/hooks/use-auth";
 
 const features = [
   {
@@ -53,6 +54,8 @@ const features = [
 ];
 
 function Navbar() {
+  const { user, isLoading } = useAuth();
+
   return (
     <header className="relative z-50 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
       <img
@@ -67,28 +70,49 @@ function Navbar() {
         <a href="#features" className="transition hover:text-white">
           Features
         </a>
+
         <a href="#how-it-works" className="transition hover:text-white">
           How it works
         </a>
+
         <a href="#about" className="transition hover:text-white">
           About
         </a>
       </nav>
 
       <div className="flex items-center gap-3">
-        <Link
-          to="/signin"
-          className="hidden px-4 py-2 text-sm font-medium text-zinc-300 transition hover:text-white sm:block"
-        >
-          Sign in
-        </Link>
-        <Link
-          to="/signup"
-          className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100"
-        >
-          Get started
-          <ArrowUpRight className="size-4" />
-        </Link>
+        {isLoading ? (
+          <div
+            role="status"
+            aria-label="Checking authentication"
+            className="h-10 w-32 animate-pulse rounded-full bg-white/10"
+          />
+        ) : user ? (
+          <Link
+            to="/chat"
+            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100"
+          >
+            Go to chat
+            <ArrowUpRight className="size-4" />
+          </Link>
+        ) : (
+          <>
+            <Link
+              to="/signin"
+              className="hidden px-4 py-2 text-sm font-medium text-zinc-300 transition hover:text-white sm:block"
+            >
+              Sign in
+            </Link>
+
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100"
+            >
+              Get started
+              <ArrowUpRight className="size-4" />
+            </Link>
+          </>
+        )}
       </div>
     </header>
   );

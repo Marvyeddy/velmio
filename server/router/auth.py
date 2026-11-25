@@ -1,5 +1,13 @@
 from typing import Annotated
-from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Cookie,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.controllers.auth import (
@@ -92,10 +100,21 @@ async def refresh_token_router(
     return await refresh_token_controller(refresh_token, session)
 
 
-@auth_router.get("/signout")
+@auth_router.post(
+    "/signout",
+    status_code=status.HTTP_200_OK,
+)
 async def signout_router(
-    session_token: Annotated[str | None, Cookie(alias="session-token")] = None,
-    refresh_token: Annotated[str | None, Cookie(alias="refresh-token")] = None,
+    session_token: Annotated[
+        str | None,
+        Cookie(alias="session-token"),
+    ] = None,
+    refresh_token: Annotated[
+        str | None,
+        Cookie(alias="refresh-token"),
+    ] = None,
 ):
-
-    return await signout_controller(session_token, refresh_token)
+    return await signout_controller(
+        session_token,
+        refresh_token,
+    )
